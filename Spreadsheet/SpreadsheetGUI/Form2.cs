@@ -14,7 +14,7 @@ namespace SpreadsheetGUI
     public partial class Form2 : Form
     {
         // the interface we will use to interact with the server
-        NetworkControl NetC;
+        SS.NetworkControl NetC;
 
         /// <summary>
         /// Creates an initial setup form
@@ -22,18 +22,17 @@ namespace SpreadsheetGUI
         /// <param name="nc"></param>
         public Form2()
         {
-            NetC = new NetworkControl();
+            NetC = new SS.NetworkControl();
             InitializeComponent();
             NetC.Connected += Connected;
             NetC.Error += ErrorRecieved;
-            NetC.Update += UpdateRecieved;
             NetC.Names += DisplayNames;
         }
 
         private void DisplayNames(string name)
         {
             this.Invoke(new MethodInvoker(
-             () => DisplaySheets.Text = DisplaySheets.Text + name));
+             () => DisplaySheets.Text = DisplaySheets.Text + name + Environment.NewLine));
 
             this.Invoke(new MethodInvoker(
              () => TextBoxSpreadsheetName.Focus()));
@@ -42,12 +41,6 @@ namespace SpreadsheetGUI
         private void ErrorRecieved(string err)
         {
             MessageBox.Show(err);
-        }
-
-        private void UpdateRecieved(string update)
-        {
-            // get the server data
-            MessageBox.Show(update);
         }
 
         /// <summary>
@@ -97,6 +90,11 @@ namespace SpreadsheetGUI
                 NetC.SendData(TextBoxSpreadsheetName.Text);
                 ButtonSelect.Enabled = false;
                 TextBoxSpreadsheetName.Enabled = false;
+
+                // open our spreadsheet form
+                Program.DemoApplicationContext.getAppContext().RunForm(new Form1());
+                this.Hide();
+
             }
             else
             {

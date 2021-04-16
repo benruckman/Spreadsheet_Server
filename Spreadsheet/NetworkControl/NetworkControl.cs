@@ -58,8 +58,7 @@ namespace SS
             if (state.ErrorOccured)
             {
                 // inform the view if we have an error
-                Error("Error connecting to server");
-                Error(state.ErrorMessage);
+                Error("Error connecting to server " + state.ErrorMessage);
                 state.OnNetworkAction = (SocketState) => { };
                 return;
             }
@@ -93,7 +92,7 @@ namespace SS
             if (state.ErrorOccured)
             {
                 // inform the view if we have an error
-                Error("Lost connection to server");
+                Error("Lost connection to server " + state.ErrorMessage);
                 return;
             }
 
@@ -104,61 +103,45 @@ namespace SS
 
             // split it into actual messages
             string[] parts = Regex.Split(jsonInfo, @"(?<=[\n])");
+
+            //string test = "Broadcast\nBlouse\nBeachhouse\n\n";
+
+            //string[] tester = Regex.Split(test, @"(?<=[\n])");
 
             foreach (string p in parts)
             {
                 // ignore empty strings added by the regex splitter
                 if (p.Length == 0)
                     continue;
+
                 // The regex splitter will include the last string even if it doesn't end with a '\n',
                 // So we need to ignore it if this happens. 
                 if (p[p.Length - 1] != '\n')
                     break;
 
-                Names(p);
+                // if we have recieved all names
+                if (p.Equals("\n"))
+                {
+                    state.OnNetworkAction = ReceiveUpdates;
+                    state.RemoveData(0, p.Length);
+                    continue;
+                }
+                    
 
                 // remove the data we just processed from the state's buffer
                 state.RemoveData(0, p.Length);
+
+                Names(p);
+
             }
 
             //starting another recieve data event loop
             // if we have recieved all of the names, change the network callback
-            state.OnNetworkAction = ReceiveSpreadsheetData;
+            //state.OnNetworkAction = ReceiveSpreadsheetData;
             Networking.GetData(state);
         }
 
-        /// <summary>
-        /// Callback for the recieveSpreadsheetNames method
-        /// Recieves initial data about the spreadsheet
-        /// </summary>
-        /// <param name="state"></param>
-        private void ReceiveSpreadsheetData(SocketState state)
-        {
-            // check to see if we still have a connection
-            if (state.ErrorOccured)
-            {
-                // inform the view if we have an error
-                Error("Lost connection to server");
-                return;
-            }
-
-            // startup: show the client the different spreadsheets
-
-            // get the Json information
-            string jsonInfo = state.GetData();
-
-            // split it into actual messages
-            string[] parts = Regex.Split(jsonInfo, @"(?<=[\n])");
-
-            for (int i = 0; i < parts.Length; i++)
-            {
-                // allow the user to select a spreadsheet
-            }
-
-            // starting another recieve data event loop
-            state.OnNetworkAction = ReceiveUpdates;
-            Networking.GetData(state);
-        }
+      
 
         /// <summary>
         /// Recieves data from the server
@@ -170,7 +153,7 @@ namespace SS
             if (state.ErrorOccured)
             {
                 // inform the view if we have an error
-                Error("Lost connection to server");
+                Error("Lost connection to server" + state.ErrorMessage);
                 return;
             }
 
@@ -207,15 +190,10 @@ namespace SS
                 //DEBUGGING
                 Update(p);
 
-
                 // remove the data we just processed from the state's buffer
                 state.RemoveData(0, p.Length);
             }
 
-            // inform the view of the updated model
-            //Update?.Invoke();
-
-            
         }
 
         /// <summary>
