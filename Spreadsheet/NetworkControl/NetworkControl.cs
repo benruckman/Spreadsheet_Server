@@ -8,11 +8,13 @@ namespace SS
     {
         // Events that the view/model can subscribe to
         public delegate void ErrorHandler(string err);
-        public delegate void UpdateFromServer();
+        public delegate void UpdateFromServer(string update);
         public delegate void ConnectedToServer();
+        public delegate void NamesFromServer(string name);
         public event ErrorHandler Error;
         public event UpdateFromServer Update;
         public event ConnectedToServer Connected;
+        public event NamesFromServer Names;
 
 
         // The spreadsheet needs to send information about itself to the server
@@ -57,6 +59,7 @@ namespace SS
             {
                 // inform the view if we have an error
                 Error("Error connecting to server");
+                Error(state.ErrorMessage);
                 state.OnNetworkAction = (SocketState) => { };
                 return;
             }
@@ -72,9 +75,9 @@ namespace SS
                 Connected();
 
                 // assign the network action event to our recieve data event
-                state.OnNetworkAction = receiveStartUpData;
+                state.OnNetworkAction = ReceiveSpreadsheetNames;
 
-                // start receiving start up data
+                // start receiving spreadsheetnames
                 Networking.GetData(state);
             }
         }
@@ -84,7 +87,7 @@ namespace SS
         /// Recieves initial data about the names of the initial spreadsheets
         /// </summary>
         /// <param name="state"></param>
-        private void receiveStartUpData(SocketState state)
+        private void ReceiveSpreadsheetNames(SocketState state)
         {
             // check to see if we still have a connection
             if (state.ErrorOccured)
@@ -102,10 +105,58 @@ namespace SS
             // split it into actual messages
             string[] parts = Regex.Split(jsonInfo, @"(?<=[\n])");
 
-            // get the actual names of the spreadsheets
+            foreach (string p in parts)
+            {
+                // ignore empty strings added by the regex splitter
+                if (p.Length == 0)
+                    continue;
+                // The regex splitter will include the last string even if it doesn't end with a '\n',
+                // So we need to ignore it if this happens. 
+                if (p[p.Length - 1] != '\n')
+                    break;
+
+                Names(p);
+
+                // remove the data we just processed from the state's buffer
+                state.RemoveData(0, p.Length);
+            }
+
+            //starting another recieve data event loop
+            // if we have recieved all of the names, change the network callback
+            state.OnNetworkAction = ReceiveSpreadsheetData;
+            Networking.GetData(state);
+        }
+
+        /// <summary>
+        /// Callback for the recieveSpreadsheetNames method
+        /// Recieves initial data about the spreadsheet
+        /// </summary>
+        /// <param name="state"></param>
+        private void ReceiveSpreadsheetData(SocketState state)
+        {
+            // check to see if we still have a connection
+            if (state.ErrorOccured)
+            {
+                // inform the view if we have an error
+                Error("Lost connection to server");
+                return;
+            }
+
+            // startup: show the client the different spreadsheets
+
+            // get the Json information
+            string jsonInfo = state.GetData();
+
+            // split it into actual messages
+            string[] parts = Regex.Split(jsonInfo, @"(?<=[\n])");
+
+            for (int i = 0; i < parts.Length; i++)
+            {
+                // allow the user to select a spreadsheet
+            }
 
             // starting another recieve data event loop
-            state.OnNetworkAction = receiveData;
+            state.OnNetworkAction = ReceiveUpdates;
             Networking.GetData(state);
         }
 
@@ -113,7 +164,7 @@ namespace SS
         /// Recieves data from the server
         /// </summary>
         /// <param name="state">The SocketState containing our server</param>
-        private void receiveData(SocketState state)
+        private void ReceiveUpdates(SocketState state)
         {
             // check to see if we still have a connection
             if (state.ErrorOccured)
@@ -124,7 +175,7 @@ namespace SS
             }
 
             // process the data that we already have
-            ProcessData(state);
+            ProcessUpdates(state);
 
             // continue event loop
             Networking.GetData(state);
@@ -134,7 +185,7 @@ namespace SS
         /// Parses the Json information recieved from the server
         /// </summary>
         /// <param name="state"></param>
-        private void ProcessData(SocketState state)
+        private void ProcessUpdates(SocketState state)
         {
             // get the Json information
             string jsonInfo = state.GetData();
@@ -153,30 +204,27 @@ namespace SS
                 if (p[p.Length - 1] != '\n')
                     break;
 
-                // update the model with the new information
-                // TODO: UPDATE THE MODEL
+                //DEBUGGING
+                Update(p);
+
 
                 // remove the data we just processed from the state's buffer
                 state.RemoveData(0, p.Length);
             }
 
             // inform the view of the updated model
-            Update?.Invoke();
+            //Update?.Invoke();
 
-            Update();
-
-            // For whatever user inputs happened during the last frame,
-            // process them.
-            ProcessInputs();
+            
         }
 
         /// <summary>
-        /// Processes the clients inputs, and sends them to the server
+        /// Sends data s to the server, followed by a newline character
         /// </summary>
-        private void ProcessInputs()
+        public void SendData(string s)
         {
-            // send the edit to the server
-            Networking.Send(theServer.TheSocket, "edit" + "\n");   //TODO: SEND ACTUAL EDITS 
+            if (theServer != null)
+                Networking.Send(theServer.TheSocket, s + "\n");
         }
 
         /// <summary>
