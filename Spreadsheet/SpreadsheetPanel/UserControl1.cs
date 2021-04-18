@@ -215,7 +215,7 @@ namespace SS
         /// <summary>
         /// Converts the cell name of into its corresponding column number
         /// </summary>
-        private int GetCellNameCol(string name)
+        public int GetCellNameCol(string name)
         {
             return Convert.ToInt32(name[0]) - 65;
         }
@@ -223,7 +223,7 @@ namespace SS
         /// <summary>
         /// Converts the cell name of into its corresponding row number
         /// </summary>
-        private int GetCellNameRow(string name)
+        public int GetCellNameRow(string name)
         {
             int.TryParse(name.Substring(1), out int result);
             return result - 1;

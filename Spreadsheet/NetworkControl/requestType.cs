@@ -3,9 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace NetworkControl
+namespace SS
 {
-    class requestType
+    public class requestType
     {
         // <summary>
         /// A Json object that represents a message from the client to the server

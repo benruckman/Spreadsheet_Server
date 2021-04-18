@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text.RegularExpressions;
 using NetworkUtil;
+using Newtonsoft.Json;
 
 namespace SS
 {
@@ -8,7 +9,7 @@ namespace SS
     {
         // Events that the view/model can subscribe to
         public delegate void ErrorHandler(string err);
-        public delegate void UpdateFromServer(string update);
+        public delegate void UpdateFromServer(SS.messageType message);
         public delegate void ConnectedToServer();
         public delegate void NamesFromServer(string name);
         public event ErrorHandler Error;
@@ -187,8 +188,9 @@ namespace SS
                 if (p[p.Length - 1] != '\n')
                     break;
 
-                //DEBUGGING
-                Update(p);
+                // deserialize our message, and let the view know
+                messageType m = JsonConvert.DeserializeObject<messageType>(p);
+                Update(m);
 
                 // remove the data we just processed from the state's buffer
                 state.RemoveData(0, p.Length);

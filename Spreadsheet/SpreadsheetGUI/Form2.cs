@@ -92,7 +92,7 @@ namespace SpreadsheetGUI
                 TextBoxSpreadsheetName.Enabled = false;
 
                 // open our spreadsheet form
-                Program.DemoApplicationContext.getAppContext().RunForm(new Form1());
+                Program.DemoApplicationContext.getAppContext().RunForm(new Form1(NetC));
                 this.Hide();
 
             }
