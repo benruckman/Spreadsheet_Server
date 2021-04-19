@@ -43,7 +43,7 @@ namespace SS
             clientName = name;
 
             // Attempt to connect to the server
-            Networking.ConnectToServer(OnConnect, address, 11000);
+            Networking.ConnectToServer(OnConnect, address, 1100);
         }
 
         /// <summary>
