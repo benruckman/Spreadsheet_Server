@@ -89,34 +89,9 @@ main(int argc, char const *argv[])
 /*
   // Read the first message from client. Message should be username
   chars_read = read(new_socket, buffer, 1024);
-  printf("%s\n", buffer);
+ 
   
-  string username = "";
-  char current =  buffer[0];
-  int i = 0;
-  while(current != '\n')
-  {
-    username += current;
-    i++;
-    current = buffer[i];
-  }
 
-  // Send a list of file names
-  char *file_list= "Spreadsheet1\nDonnieDarko\nVinylRecordsAreCool\n\n";
-  send(new_socket, file_list, sizeof(file_list), 0);
-  chars_read = read(new_socket, buffer, 1024);
-  printf("%s\n", buffer);
-
-  // Read the second message from client. Message should be the file name
-  string file_name = "";
-  current = buffer[0];
-  i = 0;
-  while(current != '\n')
-  {
-    file_name += current;
-    i++;
-    current = buffer[i];
-  }
 
   
   // Still learning about multithreading. We may uncomment in the final version
@@ -138,9 +113,41 @@ void handle_connect(int socket_id)
   
   user new_user(BUFFER_SIZE);
   new_user.set_id(socket_id);
-  
-  std::cout << new_user.get_id() << std::endl;
-  
-  int num_bytes = read(new_user.get_id(), new_user.get_buffer(), BUFFER_SIZE);
+ 
+  int num_char = read(new_user.get_id(), new_user.get_buffer(), BUFFER_SIZE);
+  // printf("%s\n", new_user.get_buffer());
+  for(int j = 0; j < BUFFER_SIZE; j++)
+  {
+    std::cout<<new_user.get_buffer()[j];
+  } 
+  std::string username = "";
+  char current =  new_user.get_buffer()[0];
+  int i = 0;
+
+  while(current != '\n')
+  {
+    username += current;
+    i++;
+    current = new_user.get_buffer()[i];
+  }
+
+  new_user.set_username(username);
+
+  // Send a list of file names
+  char *file_list= "Spreadsheet1\nDonnieDarko\nVinylRecordsAreCool\n\n";
+  //send(new_user.get_id(), file_list, sizeof(file_list), 0);
+  num_char = read(new_user.get_id(), new_user.get_buffer(), 1024);
+  // printf("%s\n", new_user.get_buffer());
+
+  // Read the second message from client. Message should be the file name
+  std::string file_name = "";
+  current = new_user.get_buffer()[0];
+  i = 0;
+  while(current != '\n')
+  {
+    file_name += current;
+    i++;
+    current = new_user.get_buffer()[i];
+  }
   
 }
