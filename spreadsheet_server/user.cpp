@@ -8,7 +8,12 @@ user::user(int buffer_size)
 {
   this->id = -1;
   this->username = "";
-  char temp_buffer[buffer_size] = {0};
+  char temp_buffer[buffer_size];
+  for(int i = 0; i < buffer_size; i++)
+  {
+    temp_buffer[i] = 0;
+  }
+  
   this->buffer = temp_buffer;
 }
 

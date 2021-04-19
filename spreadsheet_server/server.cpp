@@ -7,14 +7,14 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <pthread.h>
+#include <thread>
 #include <string>
 #include <map>
 
 #define PORT 1100
 #define BUFFER_SIZE 1024
 
-void handle_connect(void* socket_id);
+void handle_connect(int socket_id);
 
 main(int argc, char const *argv[])
 {
@@ -43,14 +43,14 @@ main(int argc, char const *argv[])
   server_address.sin_family = AF_INET;
   server_address.sin_addr.s_addr = INADDR_ANY;
   server_address.sin_port = htons( PORT );
-  
+  std::cout<<"Binding the socket"<<std::endl;
   // Binding the socket to the host address
   if(bind(socket_fd, (struct sockaddr *) &server_address, sizeof(server_address)) < 0)
   {
     perror("Binding the socket failed.");
     exit(EXIT_FAILURE);
   }
-
+  std::cout<<"Starts listening"<<std::endl;
   // Begins listening for new connections
   if(listen(socket_fd, 5) < 0)
   {
@@ -58,8 +58,7 @@ main(int argc, char const *argv[])
     exit(EXIT_FAILURE);
   }
 
-  pthread_t thread;
-
+  std::cout<<"Entering while-loop"<<std::endl;
   while(true)
   {
     // Process updates, notifying all clients of edits
@@ -70,8 +69,20 @@ main(int argc, char const *argv[])
       exit(EXIT_FAILURE);
     }
     
-    pthread_create(&thread, NULL, handle_connect, (void*) &new_socket);
+    std::cout << "Hello from main" << std::endl;
+    std::thread t(handle_connect, new_socket);
+    t.detach();
   }
+  
+
+
+
+
+
+
+
+
+
 
 
 
@@ -113,6 +124,7 @@ main(int argc, char const *argv[])
   //pthread_create(t, NULL, accept_connections, socket_fd, (struct sockaddr *) &server_address, (socklen_t*) sizeof(server_address));
   sleep(5000);
   */
+  
   return 0;
 }
 
@@ -120,13 +132,12 @@ main(int argc, char const *argv[])
  * Method is used to complete the handshake on its own thread.
  * 
  */
-void handle_connect(void* socket_id)
+void handle_connect(int socket_id)
 {
   std::cout << socket_id << std::endl;
   
-  int* id = (int*) socket_id;
   user new_user(BUFFER_SIZE);
-  new_user.set_id(*id);
+  new_user.set_id(socket_id);
   
   std::cout << new_user.get_id() << std::endl;
   
