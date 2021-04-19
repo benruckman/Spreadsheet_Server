@@ -1,18 +1,20 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>
-#include<unistd.h>
-#include<sys/types.h>
-#include<sys/socket.h>
-#include<netinet/in.h>
-#include<pthread.h>
-#include<string>
+#include "user.h"
+#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <pthread.h>
+#include <string>
+#include <map>
 
 #define PORT 1100
+#define BUFFER_SIZE 1024
 
-using namespace std;
-
-void accept_connections(int socket_fd, struct sockaddr * addr, socklen_t* addrlen);
+void handle_connect(void* socket_id);
 
 main(int argc, char const *argv[])
 {
@@ -20,7 +22,7 @@ main(int argc, char const *argv[])
   int socket_fd;
   int chars_read;
   int new_socket;
-  char buffer[1024] = {0};
+  char buffer[BUFFER_SIZE] = {0};
   struct sockaddr_in server_address;
   int address_length = sizeof(server_address);
 
@@ -55,18 +57,29 @@ main(int argc, char const *argv[])
     perror("Error while listening.");
     exit(EXIT_FAILURE);
   }
- 
-  // Accepts a new connection
-  if ((new_socket = accept(socket_fd, (struct sockaddr *) &server_address, (socklen_t *) &address_length)) < 0)
+
+  pthread_t thread;
+
+  while(true)
   {
-    perror("Error while accepting.");
-    exit(EXIT_FAILURE);
+    // Process updates, notifying all clients of edits
+    // Accepts a new connection
+    if ((new_socket = accept(socket_fd, (struct sockaddr *) &server_address, (socklen_t *) &address_length)) < 0)
+    {
+      perror("Error while accepting.");
+      exit(EXIT_FAILURE);
+    }
+    
+    pthread_create(&thread, NULL, handle_connect, (void*) &new_socket);
   }
 
+
+
+/*
   // Read the first message from client. Message should be username
   chars_read = read(new_socket, buffer, 1024);
   printf("%s\n", buffer);
- 
+  
   string username = "";
   char current =  buffer[0];
   int i = 0;
@@ -94,25 +107,29 @@ main(int argc, char const *argv[])
     current = buffer[i];
   }
 
+  
   // Still learning about multithreading. We may uncomment in the final version
   //pthread_t t;  
   //pthread_create(t, NULL, accept_connections, socket_fd, (struct sockaddr *) &server_address, (socklen_t*) sizeof(server_address));
   sleep(5000);
+  */
   return 0;
 }
 
 /*
- * Method is used to accept clients on its own thread. This method is currently not used.
+ * Method is used to complete the handshake on its own thread.
+ * 
  */
-void accept_connections(int socket_fd, struct sockaddr * addr, socklen_t* addrlen)
+void handle_connect(void* socket_id)
 {
-  int result;
-  while(true)
-  {
-    if(result = accept(socket_fd, addr, addrlen) < 0)
-    {
-      perror("Accepting the connection failed.");
-      exit(EXIT_FAILURE);
-    }
-  }
+  std::cout << socket_id << std::endl;
+  
+  int* id = (int*) socket_id;
+  user new_user(BUFFER_SIZE);
+  new_user.set_id(*id);
+  
+  std::cout << new_user.get_id() << std::endl;
+  
+  int num_bytes = read(new_user.get_id(), new_user.get_buffer(), BUFFER_SIZE);
+  
 }
