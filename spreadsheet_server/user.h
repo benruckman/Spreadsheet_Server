@@ -12,6 +12,7 @@ class user
         int id; // A numeric identifier for this user
         std::string username; // A string identifier for this user
         char* buffer; // A buffer for receiving messages over a socket connection
+        int size;
     
     public:
         user(int buffer_size); // Constructor
@@ -24,6 +25,10 @@ class user
         std::string get_username(); // Gets the username
         
         char* get_buffer(); // Returns the buffer
+        
+        void clear_buffer(); // Sets up a new buffer
+        
+        void clean(); // Deletes all heap allocated memory
 };
 
 #endif

@@ -8,13 +8,9 @@ user::user(int buffer_size)
 {
   this->id = -1;
   this->username = "";
-  char temp_buffer[buffer_size];
-  for(int i = 0; i < buffer_size; i++)
-  {
-    temp_buffer[i] = 0;
-  }
+  this->size = buffer_size;
   
-  this->buffer = temp_buffer;
+  clear_buffer();
 }
 
 /*
@@ -22,6 +18,7 @@ user::user(int buffer_size)
  */
 user::~user()
 {
+  clean();
 }
 
 /*
@@ -62,5 +59,24 @@ void user::set_username(std::string new_username)
  */
 char* user::get_buffer()
 {
-  return buffer;
+  return this->buffer;
+}
+
+void user::clear_buffer()
+{
+  clean();
+  
+  char* new_buffer = new char[size];
+    
+  for(int i = 0; i <= this->size; i++)
+  {
+    new_buffer[i] = 0;
+  }
+    
+  this->buffer = new_buffer;
+}
+
+void user::clean()
+{
+  delete [] this->buffer;
 }
