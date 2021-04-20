@@ -142,46 +142,13 @@ namespace SpreadsheetGUI
         }
 
         /// <summary>
-        /// Method that reads a spreadsheet file, and opens it up,
-        /// and displays it in the current working spreadsheet window
+        /// Opens up a new dialogue for spreadsheet connection
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
         private void fileToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            // check to see if the current spreadsheet has been edited. 
-            CheckChanged(sender, e);
-            try
-            {
-                using (OpenFileDialog fileDialog = new OpenFileDialog())
-                {
-                    fileDialog.Filter = "Spreadsheet|*.sprd|All Files| *.*";
-                    fileDialog.DefaultExt = ".sprd";
-                    fileDialog.Title = "Open a file";
-                    fileDialog.ShowDialog();
-
-                    if (fileDialog.FileName != "")
-                    {
-                        // Set Title to filename
-                        Text = fileDialog.SafeFileName;
-
-                        // Clear previous data
-                        spreadsheetPanel1.Clear();
-                        textBoxCellValue.Text = "";
-                        textBoxCellContents.Text = "";
-
-                        // Import new data and set focus on top leftmost cell.
-                        spreadsheetPanel1.Import(fileDialog.FileName);
-                        spreadsheetPanel1.SetSelection(0, 0);
-                    }
-                }
-            }
-            catch (SpreadsheetReadWriteException)
-            {
-                DialogResult r = MessageBox.Show("FileReadingError: Cannot Open the file as a spreadsheet because it is incompatable.",
-              "Invalid File",
-              MessageBoxButtons.OK);
-            }
+            Program.DemoApplicationContext.getAppContext().RunForm(new Form2());
         }
 
         /// <summary>
@@ -195,61 +162,9 @@ namespace SpreadsheetGUI
         {
             if (spreadsheetPanel1.Changed())
             {
-                DialogResult r = MessageBox.Show("You have unsaved data that will be lost. Would you like to save?",
-              "Unsaved Document",
-              MessageBoxButtons.YesNoCancel);
-
-                switch (r)
-                {
-                    case DialogResult.Yes:
-                        saveToolStripMenuItem_Click(sender, e);
-                        return true;
-                    case DialogResult.No:
-                        return false;
-                    case DialogResult.Cancel:
-                        return true;
-                    default:
-                        return false;
-                }
+                return true;
             }
             return false;
-        }
-
-        /// <summary>
-        /// Creates a new spreadsheet in a new window
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void toolStripMenuItem1_Click(object sender, EventArgs e)
-        {
-            // Tell the application context to run the form on the same
-            // thread as the other forms.
-            Program.DemoApplicationContext.getAppContext().RunForm(new Form1(NC, this.Text));
-        }
-
-        /// <summary>
-        /// Saves the current spreadsheet to file the user specifies
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void saveToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            // Displays a SaveFileDialog so the user can save the spreadsheet
-            using (SaveFileDialog s = new SaveFileDialog())
-            {
-                s.Filter = "Spreadsheet|*.sprd";
-                s.Title = "Save a spreadsheet";
-                s.DefaultExt = ".sprd";
-                s.AddExtension = true;
-                s.ShowDialog();
-
-                // If the file name isn't an empty string, open it for saving.
-                if (s.FileName != "")
-                {
-                    spreadsheetPanel1.Save(s.FileName);
-                    Text = Path.GetFileName(s.FileName);
-                }
-            }
         }
 
         /// <summary>
@@ -261,20 +176,7 @@ namespace SpreadsheetGUI
         {
             Close();
         }
-
-        /// <summary>
-        /// This method is called anytime the form closes
-        /// checks to see if there is any unsaved progress,
-        /// and prompts user accordingly
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void Form1_FormClosing_1(object sender, FormClosingEventArgs e)
-        {
-            
-
-        }
-
+ 
         /// <summary>
         /// method that shows a dialogue box with information of how to operate a spreadsheet
         /// </summary>
