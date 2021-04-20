@@ -39,17 +39,12 @@ namespace SS
         /// The event used to send notifications of a selection change
         /// </summary>
         public event SelectionChangedHandler SelectionChanged;
-
-      
-            
+    
         // The SpreadsheetPanel is composed of a DrawingPanel (where the grid is drawn),
         // a horizontal scroll bar, and a vertical scroll bar.
         private DrawingPanel drawingPanel;
         private HScrollBar hScroll;
         private VScrollBar vScroll;
-
-
-       
 
         // These constants control the layout of the spreadsheet grid.  The height and
         // width measurements are in pixels.
@@ -61,16 +56,6 @@ namespace SS
         private const int SCROLLBAR_WIDTH = 20;
         private const int COL_COUNT = 26;
         private const int ROW_COUNT = 99;
-
-
-        //////////////////////////////////////////////////////////////////////////
-        ///////////////////////NETWORKING CODE////////////////////////////////////
-        //////////////////////////////////////////////////////////////////////////
-        
-
-      
-
-
 
         // The SpreadsheetPanel is backed by a Spreadsheet (contains all of the logic)
         private Spreadsheet s;
@@ -207,7 +192,7 @@ namespace SS
         /// <param name="col"></param>
         /// <param name="row"></param>
         /// <returns></returns>
-        private string ConvertCellName(int col, int row)
+        public string ConvertCellName(int col, int row)
         {
             return Convert.ToChar(col + 65) + "" + (row + 1);
         }

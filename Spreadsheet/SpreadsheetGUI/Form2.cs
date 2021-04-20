@@ -41,6 +41,7 @@ namespace SpreadsheetGUI
         private void ErrorRecieved(string err)
         {
             MessageBox.Show(err);
+
         }
 
         /// <summary>

@@ -1,4 +1,5 @@
-﻿using SS;
+﻿using Newtonsoft.Json;
+using SS;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -48,14 +49,12 @@ namespace SpreadsheetGUI
 
         private void ServerUpdate(messageType message)
         {
-            // if our update is a cell update, reflect that
             if (message.type.Equals("cellUpdated"))
             {
                 int col = spreadsheetPanel1.GetCellNameCol(message.cellName);
                 int row = spreadsheetPanel1.GetCellNameRow(message.cellName);
                 spreadsheetPanel1.SetContents(col, row, message.cellContents);
                 spreadsheetPanel1.GetValue(col, row, out string val);
-                textBoxCellValue.Text = val;
             }
 
             // TODO:IF SEL SELECTION REQUEST
@@ -123,17 +122,19 @@ namespace SpreadsheetGUI
         /// <param name="e"></param>
         private void textBoxCellContents_KeyPress(object sender, KeyPressEventArgs e)
         {
-
-            //TODO: SEND *SHIT* TO THE SERVER
             if (e.KeyChar == (char)Keys.Return)
             {
                 TextBox t = (TextBox)sender;
                 string contents = t.Text.ToString();
                 spreadsheetPanel1.GetSelection(out int col, out int row);
-                spreadsheetPanel1.SetContents(col, row, contents);
-                spreadsheetPanel1.GetValue(col, row, out string val);
-                textBoxCellValue.Text = val;
-                textBoxCellContents.Text = spreadsheetPanel1.GetContents(col, row);
+                requestType r = new requestType("editCell", spreadsheetPanel1.ConvertCellName(col, row), contents);
+                string request = JsonConvert.SerializeObject(r) + "\n";
+                NC.SendData(request);
+                t.Clear(); // clear the data from the textbox
+                //spreadsheetPanel1.SetContents(col, row, contents);
+                //spreadsheetPanel1.GetValue(col, row, out string val);
+                //textBoxCellValue.Text = val;
+                //textBoxCellContents.Text = spreadsheetPanel1.GetContents(col, row);
                 e.Handled = true;
             }
         }
@@ -268,8 +269,7 @@ namespace SpreadsheetGUI
         /// <param name="e"></param>
         private void Form1_FormClosing_1(object sender, FormClosingEventArgs e)
         {
-            if (CheckChanged(sender, e))
-                e.Cancel = true;
+            
 
         }
 
