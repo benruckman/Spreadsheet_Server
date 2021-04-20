@@ -22,17 +22,16 @@ namespace SpreadsheetGUI
         /// <summary>
         /// Creates a new window displaying an empty spreadsheet
         /// </summary>
-        public Form1(SS.NetworkControl NetC)
+        public Form1(SS.NetworkControl NetC, string filename)
         {
             this.NC = NetC;
 
             NC.Update += ServerUpdate;
-        
-            // the name of the form
-            this.Text = "Untitled Spreadsheet";
-
-            // initialize form
+       
             InitializeComponent();
+
+            // the name of the form
+            this.Text = filename;
 
             // highlights 
             this.ActiveControl = textBoxCellContents;
@@ -45,6 +44,9 @@ namespace SpreadsheetGUI
 
             // call the method to update selection
             OnSelectionChanged(spreadsheetPanel1);
+
+            // set the name of the window to the filename
+            Text = filename;
         }
 
         private void ServerUpdate(messageType message)
@@ -222,7 +224,7 @@ namespace SpreadsheetGUI
         {
             // Tell the application context to run the form on the same
             // thread as the other forms.
-            Program.DemoApplicationContext.getAppContext().RunForm(new Form1(NC));
+            Program.DemoApplicationContext.getAppContext().RunForm(new Form1(NC, this.Text));
         }
 
         /// <summary>
