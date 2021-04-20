@@ -11,7 +11,6 @@
 #include <string.h>
 #include <map>
 #include <stdio.h>
-#include <poll.h>
 
 #define PORT 1100
 #define BUFFER_SIZE 1024
@@ -61,13 +60,21 @@ main(int argc, char const *argv[])
   }
 
   std::cout << "Listening for connection..." << std::endl;
-  
-  std::thread t(handle_connect, new_socket);
-  t.detach();
-  
+
   while(true)
   {
+    // Process updates, notifying all clients of edits
+    // Accepts a new connection
+    if ((new_socket = accept(socket_fd, (struct sockaddr *) &server_address, (socklen_t *) &address_length)) < 0)
+    {
+      perror("Error while accepting.");
+      exit(EXIT_FAILURE);
+    }
     
+    std::cout << "New user connecting" << std::endl;
+    
+    std::thread t(handle_connect, new_socket);
+    t.detach();
   }
   
   return 0;
@@ -79,64 +86,53 @@ main(int argc, char const *argv[])
  */
 void handle_connect(int socket_id)
 {
-  while(true)
+  user new_user(BUFFER_SIZE);
+  new_user.set_id(socket_id);
+ 
+  int num_char = read(new_user.get_id(), new_user.get_buffer(), BUFFER_SIZE);
+  
+  std::string username = "";
+  char current =  new_user.get_buffer()[0];
+  int i = 0;
+
+  while(current != '\n')
   {
-    // Process updates, notifying all clients of edits
-    // Accepts a new connection
-    if ((new_socket = accept(socket_fd, (struct sockaddr *) &server_address, (socklen_t *) &address_length)) < 0)
-    {
-      perror("Error while accepting.");
-      exit(EXIT_FAILURE);
-    }
-      
-    user new_user(BUFFER_SIZE);
-    new_user.set_id(socket_id);
-   
-    int num_char = read(new_user.get_id(), new_user.get_buffer(), BUFFER_SIZE);
-    
-    std::string username = "";
-    char current =  new_user.get_buffer()[0];
-    int i = 0;
-  
-    while(current != '\n')
-    {
-      username += current;
-      i++;
-      current = new_user.get_buffer()[i];
-    }
-    
-    bzero(new_user.get_buffer(), BUFFER_SIZE);
-    
-    std::cout << "Username: " << username << std::endl;
-    std::cout << "Socket ID: " << socket_id << std::endl;
-  
-    // Set the username
-    new_user.set_username(username);
-  
-    // Send a list of file names
-    char *file_list = "Spreadsheet1\nDonnieDarko\nVinylRecordsAreCool\n\n";
-    
-    std::cout << "Sending: " << "Spreadsheet1\nDonnieDarko\nVinylRecordsAreCool\n\n" << std::endl;
-    
-    send(new_user.get_id(), file_list, strlen(file_list), 0);
-    
-    // Read response
-    num_char = read(new_user.get_id(), new_user.get_buffer(), 1024);
-  
-    // Read the second message from client. Message should be the file name
-    std::string file_name = "";
-    current = new_user.get_buffer()[0];
-    i = 0;
-    
-    while(current != '\n')
-    {
-      file_name += current;
-      i++;
-      current = new_user.get_buffer()[i];
-    }
-    
-    bzero(new_user.get_buffer(), BUFFER_SIZE);
-    
-    std::cout << "File name: " << file_name << std::endl;
+    username += current;
+    i++;
+    current = new_user.get_buffer()[i];
   }
+  
+  bzero(new_user.get_buffer(), BUFFER_SIZE);
+  
+  std::cout << "Username: " << username << std::endl;
+  std::cout << "Socket ID: " << socket_id << std::endl;
+
+  // Set the username
+  new_user.set_username(username);
+
+  // Send a list of file names
+  char *file_list = "Spreadsheet1\nDonnieDarko\nVinylRecordsAreCool\n\n";
+  
+  std::cout << "Sending: " << "Spreadsheet1\nDonnieDarko\nVinylRecordsAreCool\n\n" << std::endl;
+  
+  send(new_user.get_id(), file_list, strlen(file_list), 0);
+  
+  // Read response
+  num_char = read(new_user.get_id(), new_user.get_buffer(), 1024);
+
+  // Read the second message from client. Message should be the file name
+  std::string file_name = "";
+  current = new_user.get_buffer()[0];
+  i = 0;
+  
+  while(current != '\n')
+  {
+    file_name += current;
+    i++;
+    current = new_user.get_buffer()[i];
+  }
+  
+  bzero(new_user.get_buffer(), BUFFER_SIZE);
+  
+  std::cout << "File name: " << file_name << std::endl;
 }
