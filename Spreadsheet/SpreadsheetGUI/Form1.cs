@@ -12,19 +12,21 @@ using System.Windows.Forms;
 
 namespace SpreadsheetGUI
 {
-
     public delegate void TextBoxContentsChangedHandler(SpreadsheetPanel sender);
-
-    public delegate void UpdateFromServer();
-
 
     public partial class Form1 : Form
     {
+        SS.NetworkControl NC;
+
         /// <summary>
         /// Creates a new window displaying an empty spreadsheet
         /// </summary>
-        public Form1()
+        public Form1(SS.NetworkControl NetC)
         {
+            this.NC = NetC;
+
+            NC.Update += ServerUpdate;
+        
             // the name of the form
             this.Text = "Untitled Spreadsheet";
 
@@ -42,6 +44,38 @@ namespace SpreadsheetGUI
 
             // call the method to update selection
             OnSelectionChanged(spreadsheetPanel1);
+        }
+
+        private void ServerUpdate(messageType message)
+        {
+            // if our update is a cell update, reflect that
+            if (message.type.Equals("cellUpdated"))
+            {
+                int col = spreadsheetPanel1.GetCellNameCol(message.cellName);
+                int row = spreadsheetPanel1.GetCellNameRow(message.cellName);
+                spreadsheetPanel1.SetContents(col, row, message.cellContents);
+                spreadsheetPanel1.GetValue(col, row, out string val);
+                textBoxCellValue.Text = val;
+            }
+
+            // TODO:IF SEL SELECTION REQUEST
+
+            if (message.type.Equals("requestError"))
+            {
+                MessageBox.Show("Request error: " + message.errorMessage);
+            }
+
+            if(message.type.Equals("disconnected"))
+            {
+                // remove disconnected user from our list
+            }
+
+            if (message.type.Equals("serverError"))
+            {
+                MessageBox.Show("Server error: " + message.errorMessage);
+            }
+
+            return;
         }
 
         /// <summary>
@@ -66,6 +100,8 @@ namespace SpreadsheetGUI
 
             // Focus the input onto the contents textbox
             textBoxCellContents.Focus();
+
+            //SEND SHIT
         }
 
         /// <summary>
@@ -87,6 +123,8 @@ namespace SpreadsheetGUI
         /// <param name="e"></param>
         private void textBoxCellContents_KeyPress(object sender, KeyPressEventArgs e)
         {
+
+            //TODO: SEND *SHIT* TO THE SERVER
             if (e.KeyChar == (char)Keys.Return)
             {
                 TextBox t = (TextBox)sender;
@@ -183,7 +221,7 @@ namespace SpreadsheetGUI
         {
             // Tell the application context to run the form on the same
             // thread as the other forms.
-            Program.DemoApplicationContext.getAppContext().RunForm(new Form1());
+            Program.DemoApplicationContext.getAppContext().RunForm(new Form1(NC));
         }
 
         /// <summary>
