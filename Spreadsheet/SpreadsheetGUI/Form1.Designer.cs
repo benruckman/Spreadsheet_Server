@@ -43,13 +43,15 @@
             this.buttonHelp = new System.Windows.Forms.Button();
             this.helpProvider1 = new System.Windows.Forms.HelpProvider();
             this.spreadsheetPanel1 = new SS.SpreadsheetPanel();
+            this.UndoButton = new System.Windows.Forms.Button();
+            this.RevertButton = new System.Windows.Forms.Button();
             this.toolStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
             // textBoxCellName
             // 
             this.textBoxCellName.Location = new System.Drawing.Point(68, 50);
-            this.textBoxCellName.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.textBoxCellName.Margin = new System.Windows.Forms.Padding(2);
             this.textBoxCellName.Name = "textBoxCellName";
             this.textBoxCellName.ReadOnly = true;
             this.textBoxCellName.Size = new System.Drawing.Size(52, 20);
@@ -88,7 +90,7 @@
             // textBoxCellValue
             // 
             this.textBoxCellValue.Location = new System.Drawing.Point(165, 50);
-            this.textBoxCellValue.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.textBoxCellValue.Margin = new System.Windows.Forms.Padding(2);
             this.textBoxCellValue.Name = "textBoxCellValue";
             this.textBoxCellValue.ReadOnly = true;
             this.textBoxCellValue.Size = new System.Drawing.Size(223, 20);
@@ -97,7 +99,7 @@
             // textBoxCellContents
             // 
             this.textBoxCellContents.Location = new System.Drawing.Point(448, 50);
-            this.textBoxCellContents.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.textBoxCellContents.Margin = new System.Windows.Forms.Padding(2);
             this.textBoxCellContents.Name = "textBoxCellContents";
             this.textBoxCellContents.Size = new System.Drawing.Size(244, 20);
             this.textBoxCellContents.TabIndex = 6;
@@ -131,14 +133,14 @@
             // fileToolStripMenuItem
             // 
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
-            this.fileToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.fileToolStripMenuItem.Size = new System.Drawing.Size(103, 22);
             this.fileToolStripMenuItem.Text = "Open";
             this.fileToolStripMenuItem.Click += new System.EventHandler(this.fileToolStripMenuItem_Click);
             // 
             // closeToolStripMenuItem
             // 
             this.closeToolStripMenuItem.Name = "closeToolStripMenuItem";
-            this.closeToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.closeToolStripMenuItem.Size = new System.Drawing.Size(103, 22);
             this.closeToolStripMenuItem.Text = "Close";
             this.closeToolStripMenuItem.Click += new System.EventHandler(this.closeToolStripMenuItem_Click);
             // 
@@ -168,11 +170,31 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.spreadsheetPanel1.Location = new System.Drawing.Point(9, 79);
-            this.spreadsheetPanel1.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.spreadsheetPanel1.Margin = new System.Windows.Forms.Padding(2);
             this.spreadsheetPanel1.MinimumSize = new System.Drawing.Size(1, 1);
             this.spreadsheetPanel1.Name = "spreadsheetPanel1";
             this.spreadsheetPanel1.Size = new System.Drawing.Size(806, 366);
             this.spreadsheetPanel1.TabIndex = 0;
+            // 
+            // UndoButton
+            // 
+            this.UndoButton.Location = new System.Drawing.Point(313, 12);
+            this.UndoButton.Name = "UndoButton";
+            this.UndoButton.Size = new System.Drawing.Size(75, 23);
+            this.UndoButton.TabIndex = 9;
+            this.UndoButton.Text = "Undo";
+            this.UndoButton.UseVisualStyleBackColor = true;
+            this.UndoButton.Click += new System.EventHandler(this.UndoButton_Click);
+            // 
+            // RevertButton
+            // 
+            this.RevertButton.Location = new System.Drawing.Point(448, 12);
+            this.RevertButton.Name = "RevertButton";
+            this.RevertButton.Size = new System.Drawing.Size(75, 23);
+            this.RevertButton.TabIndex = 10;
+            this.RevertButton.Text = "Revert";
+            this.RevertButton.UseVisualStyleBackColor = true;
+            this.RevertButton.Click += new System.EventHandler(this.RevertButton_Click);
             // 
             // Form1
             // 
@@ -180,6 +202,8 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.LightGray;
             this.ClientSize = new System.Drawing.Size(816, 456);
+            this.Controls.Add(this.RevertButton);
+            this.Controls.Add(this.UndoButton);
             this.Controls.Add(this.buttonHelp);
             this.Controls.Add(this.toolStrip1);
             this.Controls.Add(this.textBoxCellContents);
@@ -190,7 +214,7 @@
             this.Controls.Add(this.textBoxCellName);
             this.Controls.Add(this.spreadsheetPanel1);
             this.HelpButton = true;
-            this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.Margin = new System.Windows.Forms.Padding(2);
             this.Name = "Form1";
             this.Text = "Untitled";
             this.toolStrip1.ResumeLayout(false);
@@ -217,6 +241,8 @@
         private System.Windows.Forms.HelpProvider helpProvider1;
         private System.Windows.Forms.HelpProvider helpProvider2;
         private System.Windows.Forms.ToolStripButton toolStripNightModeButton;
+        private System.Windows.Forms.Button UndoButton;
+        private System.Windows.Forms.Button RevertButton;
     }
 }
 
