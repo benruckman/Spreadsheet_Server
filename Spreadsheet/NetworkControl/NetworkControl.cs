@@ -90,10 +90,12 @@ namespace SS
         private void ReceiveSpreadsheetNames(SocketState state)
         {
             // check to see if we still have a connection
+            
+            
             if (state.ErrorOccured)
             {
                 // inform the view if we have an error
-                Error("Lost connection to server");
+                Error("Lost connection to server in recieve spreadsheet names. Message: " + state.ErrorMessage);
                 return;
             }
 
@@ -151,7 +153,7 @@ namespace SS
             if (state.ErrorOccured)
             {
                 // inform the view if we have an error
-                Error("Lost connection to server");
+                Error("Lost connection to server in Recieve updates. Message: " + state.ErrorMessage);
                 return;
             }
 
