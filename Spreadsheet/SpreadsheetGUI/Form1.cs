@@ -59,7 +59,6 @@ namespace SpreadsheetGUI
                 spreadsheetPanel1.GetValue(col, row, out string val);
             }
 
-            // TODO:IF SEL SELECTION REQUEST
             if (message.type.Equals("cellSelected"))
             {
                 int col = spreadsheetPanel1.GetCellNameCol(message.cellName);
@@ -110,7 +109,10 @@ namespace SpreadsheetGUI
             // Focus the input onto the contents textbox
             textBoxCellContents.Focus();
 
-            //SEND SHIT
+            // Sending selection changed to server via JSon
+            requestType r = new requestType("selectCell", spreadsheetPanel1.ConvertCellName(col, row));
+            string request = JsonConvert.SerializeObject(r) + "\n";
+            NC.SendData(request);
         }
 
         /// <summary>

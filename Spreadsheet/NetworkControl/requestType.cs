@@ -22,6 +22,12 @@ namespace SS
             cellName = name;
         }
 
+        public requestType(string type, string name)
+        {
+            this.type = type;
+            cellName = name;
+        }
+
         [JsonProperty(PropertyName = "requestType", Required = Required.Always)]
         public string type { get; private set; }
 
