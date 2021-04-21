@@ -9,9 +9,9 @@ namespace SS
     /// A Json object that represents a message from the server to the client
     /// </summary>
     [JsonObject(MemberSerialization.OptIn)]
-    public class messageType
+    public class MessageType
     {
-        public messageType()
+        public MessageType()
         {
 
         }

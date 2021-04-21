@@ -9,7 +9,7 @@ namespace SS
     {
         // Events that the view/model can subscribe to
         public delegate void ErrorHandler(string err);
-        public delegate void UpdateFromServer(SS.messageType message);
+        public delegate void UpdateFromServer(MessageType message);
         public delegate void ConnectedToServer();
         public delegate void NamesFromServer(string name);
         public event ErrorHandler Error;
@@ -189,8 +189,8 @@ namespace SS
 
                 // deserialize our message, and let the view know
                 try
-                {              
-                    messageType m = JsonConvert.DeserializeObject<messageType>(p);
+                {
+                    MessageType m = JsonConvert.DeserializeObject<MessageType>(p);
                     Update(m);
                 }
                 catch(Newtonsoft.Json.JsonSerializationException)

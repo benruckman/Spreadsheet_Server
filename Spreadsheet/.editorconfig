@@ -1,0 +1,4 @@
+﻿[*.cs]
+
+# CS0234: The type or namespace name 'MessageType' does not exist in the namespace 'SS' (are you missing an assembly reference?)
+dotnet_diagnostic.CS0234.severity = none

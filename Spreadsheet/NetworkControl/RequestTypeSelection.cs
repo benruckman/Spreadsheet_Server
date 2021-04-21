@@ -8,21 +8,14 @@ namespace SS
     /// A Json object that represents a message from the client to the server
     /// </summary>
     [JsonObject(MemberSerialization.OptIn)]
-    public class RequestType
+    public class RequestTypeSelection
     {
-        public RequestType()
+        public RequestTypeSelection()
         {
 
         }
 
-        public RequestType(string type, string name, string contents)
-        {
-            this.type = type;
-            cellContents = contents;
-            cellName = name;
-        }
-
-        public RequestType(string type, string name)
+        public RequestTypeSelection(string type, string name)
         {
             this.type = type;
             cellName = name;
@@ -33,9 +26,6 @@ namespace SS
 
         [JsonProperty(PropertyName = "cellName")]
         public string cellName { get; private set; }
-
-        [JsonProperty(PropertyName = "contents")]
-        public string cellContents { get; private set; }
     }
 
 }
