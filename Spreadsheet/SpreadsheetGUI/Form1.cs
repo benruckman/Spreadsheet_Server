@@ -231,6 +231,23 @@ namespace SpreadsheetGUI
                 toolStripNightModeButton.Checked = true;
             }
         }
+
+        private void UndoButton_Click(object sender, EventArgs e)
+        {
+            // Sending undo request to server via JSon
+            UndoRequest r = new UndoRequest("undo");
+            string request = JsonConvert.SerializeObject(r) + "\n";
+            NC.SendData(request);
+        }
+
+        private void RevertButton_Click(object sender, EventArgs e)
+        {
+            // Sending revert request to server via JSon
+            spreadsheetPanel1.GetSelection(out int col, out int row);
+            RevertRequest r = new RevertRequest("revertCell", spreadsheetPanel1.ConvertCellName(col, row));
+            string request = JsonConvert.SerializeObject(r) + "\n";
+            NC.SendData(request);
+        }
     }
 }
 
