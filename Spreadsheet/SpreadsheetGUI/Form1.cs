@@ -17,12 +17,12 @@ namespace SpreadsheetGUI
 
     public partial class Form1 : Form
     {
-        SS.NetworkControl NC;
+        NetworkControl NC;
 
         /// <summary>
         /// Creates a new window displaying an empty spreadsheet
         /// </summary>
-        public Form1(SS.NetworkControl NetC, string filename)
+        public Form1(NetworkControl NetC, string filename)
         {
             this.NC = NetC;
 
@@ -49,7 +49,7 @@ namespace SpreadsheetGUI
             Text = filename;
         }
 
-        private void ServerUpdate(messageType message)
+        private void ServerUpdate(SS.MessageType message)
         {
             if (message.type.Equals("cellUpdated"))
             {
@@ -110,7 +110,7 @@ namespace SpreadsheetGUI
             textBoxCellContents.Focus();
 
             // Sending selection changed to server via JSon
-            requestType r = new requestType("selectCell", spreadsheetPanel1.ConvertCellName(col, row));
+            RequestTypeSelection r = new RequestTypeSelection("selectCell", spreadsheetPanel1.ConvertCellName(col, row));
             string request = JsonConvert.SerializeObject(r) + "\n";
             NC.SendData(request);
         }
@@ -139,7 +139,7 @@ namespace SpreadsheetGUI
                 TextBox t = (TextBox)sender;
                 string contents = t.Text.ToString();
                 spreadsheetPanel1.GetSelection(out int col, out int row);
-                requestType r = new requestType("editCell", spreadsheetPanel1.ConvertCellName(col, row), contents);
+                RequestType r = new RequestType("editCell", spreadsheetPanel1.ConvertCellName(col, row), contents);
                 string request = JsonConvert.SerializeObject(r) + "\n";
                 NC.SendData(request);
                 t.Clear(); // clear the data from the textbox
