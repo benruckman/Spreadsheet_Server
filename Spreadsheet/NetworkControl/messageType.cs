@@ -11,6 +11,11 @@ namespace SS
     [JsonObject(MemberSerialization.OptIn)]
     public class messageType
     {
+        public messageType()
+        {
+
+        }
+
         [JsonProperty(PropertyName = "messageType", Required = Required.Always)]
         public string type { get; private set; }
 

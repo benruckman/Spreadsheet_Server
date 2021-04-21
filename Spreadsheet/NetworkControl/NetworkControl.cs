@@ -21,6 +21,7 @@ namespace SS
         // The spreadsheet needs to send information about itself to the server
         // That information is stored in these variables
         private string clientName;
+
         private int clientID;
 
         // State representing the connection to the server
@@ -33,7 +34,6 @@ namespace SS
             clientID = -1;
             clientName = null;
         }
-
 
         /// <summary>
         /// Atttemps to connect to a server at address
@@ -59,7 +59,7 @@ namespace SS
             if (state.ErrorOccured)
             {
                 // inform the view if we have an error
-                Error("Error connecting to server " + state.ErrorMessage);
+                Error("Error connecting to server");
                 state.OnNetworkAction = (SocketState) => { };
                 return;
             }
@@ -90,10 +90,12 @@ namespace SS
         private void ReceiveSpreadsheetNames(SocketState state)
         {
             // check to see if we still have a connection
+            
+            
             if (state.ErrorOccured)
             {
                 // inform the view if we have an error
-                Error("Lost connection to server " + state.ErrorMessage);
+                Error("Lost connection to server in recieve spreadsheet names. Message: " + state.ErrorMessage);
                 return;
             }
 
@@ -133,7 +135,6 @@ namespace SS
                 state.RemoveData(0, p.Length);
 
                 Names(p);
-
             }
 
             //starting another recieve data event loop
@@ -141,8 +142,6 @@ namespace SS
             //state.OnNetworkAction = ReceiveSpreadsheetData;
             Networking.GetData(state);
         }
-
-      
 
         /// <summary>
         /// Recieves data from the server
@@ -154,7 +153,7 @@ namespace SS
             if (state.ErrorOccured)
             {
                 // inform the view if we have an error
-                Error("Lost connection to server" + state.ErrorMessage);
+                Error("Lost connection to server in Recieve updates. Message: " + state.ErrorMessage);
                 return;
             }
 
@@ -189,9 +188,16 @@ namespace SS
                     break;
 
                 // deserialize our message, and let the view know
-                messageType m = JsonConvert.DeserializeObject<messageType>(p);
-                Update(m);
-
+                try
+                {              
+                    messageType m = JsonConvert.DeserializeObject<messageType>(p);
+                    Update(m);
+                }
+                catch(Newtonsoft.Json.JsonSerializationException)
+                {
+                    Error("Invalid Message from server");
+                }
+               
                 // remove the data we just processed from the state's buffer
                 state.RemoveData(0, p.Length);
             }

@@ -21,7 +21,7 @@ namespace SS
 
     public delegate void SelectionChangedHandler(SpreadsheetPanel sender);
 
-    
+
 
     /// <summary>
     /// A panel that displays a spreadsheet with 26 columns (labeled A-Z) and 99 rows
@@ -40,16 +40,11 @@ namespace SS
         /// </summary>
         public event SelectionChangedHandler SelectionChanged;
 
-      
-            
         // The SpreadsheetPanel is composed of a DrawingPanel (where the grid is drawn),
         // a horizontal scroll bar, and a vertical scroll bar.
         private DrawingPanel drawingPanel;
         private HScrollBar hScroll;
         private VScrollBar vScroll;
-
-
-       
 
         // These constants control the layout of the spreadsheet grid.  The height and
         // width measurements are in pixels.
@@ -61,16 +56,6 @@ namespace SS
         private const int SCROLLBAR_WIDTH = 20;
         private const int COL_COUNT = 26;
         private const int ROW_COUNT = 99;
-
-
-        //////////////////////////////////////////////////////////////////////////
-        ///////////////////////NETWORKING CODE////////////////////////////////////
-        //////////////////////////////////////////////////////////////////////////
-        
-
-      
-
-
 
         // The SpreadsheetPanel is backed by a Spreadsheet (contains all of the logic)
         private Spreadsheet s;
@@ -167,13 +152,13 @@ namespace SS
                 cellsToRecalculate = s.SetContentsOfCell(cellName, contents);
                 RecalculateCells(cellsToRecalculate);
             }
-            catch(FormulaFormatException e)
+            catch (FormulaFormatException e)
             {
                 cellsToRecalculate = s.SetContentsOfCell(cellName, initialContents);
                 RecalculateCells(cellsToRecalculate);
                 MessageBox.Show(e.Message, "Invalid Formula");
             }
-            catch(CircularException e)
+            catch (CircularException e)
             {
                 cellsToRecalculate = s.SetContentsOfCell(cellName, initialContents);
                 RecalculateCells(cellsToRecalculate);
@@ -193,7 +178,7 @@ namespace SS
                 int col = GetCellNameCol(cellName);
                 int row = GetCellNameRow(cellName);
                 object val = s.GetCellValue(cellName);
-                if(val is FormulaError)
+                if (val is FormulaError)
                     SetValue(col, row, "FormulaError");
                 else
                     SetValue(col, row, s.GetCellValue(cellName).ToString());
@@ -207,7 +192,7 @@ namespace SS
         /// <param name="col"></param>
         /// <param name="row"></param>
         /// <returns></returns>
-        private string ConvertCellName(int col, int row)
+        public string ConvertCellName(int col, int row)
         {
             return Convert.ToChar(col + 65) + "" + (row + 1);
         }
@@ -271,6 +256,11 @@ namespace SS
             return drawingPanel.SetSelection(col, row);
         }
 
+        public bool ChangeUserSelection(int col, int row, int userName)
+        {
+            return drawingPanel.ChangeUserSelection(col, row, userName);
+        }
+
         /// <summary>
         /// Assigns the column and row of the current selection to the
         /// out parameters.
@@ -310,7 +300,7 @@ namespace SS
             base.OnResize(eventargs);
             if (FindForm() == null || FindForm().WindowState != FormWindowState.Minimized)
             {
-               
+
                 drawingPanel.Size = new Size(Width - SCROLLBAR_WIDTH, Height - SCROLLBAR_WIDTH);
                 vScroll.Location = new Point(Width - SCROLLBAR_WIDTH, 0);
                 vScroll.Size = new Size(SCROLLBAR_WIDTH, Height - SCROLLBAR_WIDTH);
@@ -405,16 +395,29 @@ namespace SS
             public Color fontColor;
             public Color RowLabelColor;
             public Color ColLabelColor;
+            
+            // Represent other users, and where they are selecting cells
+            private Dictionary<int, Address> otherUsers;
 
             public DrawingPanel(SpreadsheetPanel ss)
             {
                 DoubleBuffered = true;
                 _values = new Dictionary<Address, String>();
+                otherUsers = new Dictionary<int, Address>();
                 _ssp = ss;
                 dataBackground = Color.White;
                 fontColor = Color.Black;
                 RowLabelColor = Color.Black;
                 ColLabelColor = Color.Black;
+            }
+
+            public bool ChangeUserSelection(int col, int row, int userName)
+            {
+                if (otherUsers.ContainsKey(userName))
+                    otherUsers.Remove(userName);
+                otherUsers.Add(userName, new Address(col, row));
+                Invalidate();
+                return true;
             }
 
 
@@ -567,6 +570,21 @@ namespace SS
                                       DATA_ROW_HEIGHT - 2));
                 }
 
+                //Explicitly for drawing other user's highlighted cells 
+                foreach (Address a in otherUsers.Values)
+                {
+                    //We need this to happen for all different people selecting in our code spreadsheet, for the spreadsheet server. 
+                    if ((a.Col - _firstColumn >= 0) && (a.Row - _firstRow >= 0))
+                    {
+                        e.Graphics.DrawRectangle(
+                            pen,
+                            new Rectangle(LABEL_COL_WIDTH + (a.Col - _firstColumn) * DATA_COL_WIDTH + 1,
+                                          LABEL_ROW_HEIGHT + (a.Row - _firstRow) * DATA_ROW_HEIGHT + 1,
+                                          DATA_COL_WIDTH - 2,
+                                          DATA_ROW_HEIGHT - 2));
+                    }
+                }
+
                 // Draw the text
                 foreach (KeyValuePair<Address, String> address in _values)
                 {
@@ -592,9 +610,9 @@ namespace SS
                             LABEL_ROW_HEIGHT + y * DATA_ROW_HEIGHT + (DATA_ROW_HEIGHT - height) / 2);
                     }
                 }
-
-
             }
+
+
 
 
             /// <summary>

@@ -5,6 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using SS;
@@ -24,6 +25,7 @@ namespace SpreadsheetGUI
         {
             NetC = new SS.NetworkControl();
             InitializeComponent();
+            Text = "Spreadsheet Launcher";
             NetC.Connected += Connected;
             NetC.Error += ErrorRecieved;
             NetC.Names += DisplayNames;
@@ -41,6 +43,7 @@ namespace SpreadsheetGUI
         private void ErrorRecieved(string err)
         {
             MessageBox.Show(err);
+
         }
 
         /// <summary>
@@ -87,13 +90,15 @@ namespace SpreadsheetGUI
         {
             if (TextBoxSpreadsheetName.Text != "" && TextBoxUserName.Text != "")
             {
+                string name = TextBoxSpreadsheetName.Text;
                 NetC.SendData(TextBoxSpreadsheetName.Text);
                 ButtonSelect.Enabled = false;
                 TextBoxSpreadsheetName.Enabled = false;
 
                 // open our spreadsheet form
-                Program.DemoApplicationContext.getAppContext().RunForm(new Form1(NetC));
-                this.Hide();
+                
+                new Thread(() => Program.DemoApplicationContext.getAppContext().RunForm(new Form1(NetC, name))).Start();
+                this.Close();
 
             }
             else
