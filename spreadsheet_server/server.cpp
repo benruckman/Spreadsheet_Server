@@ -1,8 +1,10 @@
+
 // Server for networked spreadsheet
 // Networking code from here: 
 // https://www.geeksforgeeks.org/socket-programming-in-cc-handling-multiple-clients-on-server-without-multi-threading/
 // 
 // 
+
 
 #include <stdio.h>
 #include <string.h> 
@@ -19,6 +21,7 @@
 #define TRUE 1
 #define FALSE 0
 #define PORT 1100
+#define BUFFER_SIZE 1024
 
 int handle_connection(int sd, char buffer[], int valread);
 
@@ -242,3 +245,4 @@ int handle_connection(int newfd, char buf[], int nbytes)
 
     return newfd;
 }
+

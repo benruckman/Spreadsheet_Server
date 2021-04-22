@@ -17,12 +17,12 @@ namespace SpreadsheetGUI
 
     public partial class Form1 : Form
     {
-        SS.NetworkControl NC;
+        NetworkControl NC;
 
         /// <summary>
         /// Creates a new window displaying an empty spreadsheet
         /// </summary>
-        public Form1(SS.NetworkControl NetC, string filename)
+        public Form1(NetworkControl NetC, string filename)
         {
             this.NC = NetC;
 
@@ -49,7 +49,7 @@ namespace SpreadsheetGUI
             Text = filename;
         }
 
-        private void ServerUpdate(messageType message)
+        private void ServerUpdate(SS.MessageType message)
         {
             if (message.type.Equals("cellUpdated"))
             {
@@ -59,7 +59,6 @@ namespace SpreadsheetGUI
                 spreadsheetPanel1.GetValue(col, row, out string val);
             }
 
-            // TODO:IF SEL SELECTION REQUEST
             if (message.type.Equals("cellSelected"))
             {
                 int col = spreadsheetPanel1.GetCellNameCol(message.cellName);
@@ -110,7 +109,10 @@ namespace SpreadsheetGUI
             // Focus the input onto the contents textbox
             textBoxCellContents.Focus();
 
-            //SEND SHIT
+            // Sending selection changed to server via JSon
+            RequestTypeSelection r = new RequestTypeSelection("selectCell", spreadsheetPanel1.ConvertCellName(col, row));
+            string request = JsonConvert.SerializeObject(r) + "\n";
+            NC.SendData(request);
         }
 
         /// <summary>
@@ -137,7 +139,7 @@ namespace SpreadsheetGUI
                 TextBox t = (TextBox)sender;
                 string contents = t.Text.ToString();
                 spreadsheetPanel1.GetSelection(out int col, out int row);
-                requestType r = new requestType("editCell", spreadsheetPanel1.ConvertCellName(col, row), contents);
+                RequestType r = new RequestType("editCell", spreadsheetPanel1.ConvertCellName(col, row), contents);
                 string request = JsonConvert.SerializeObject(r) + "\n";
                 NC.SendData(request);
                 t.Clear(); // clear the data from the textbox
@@ -228,6 +230,23 @@ namespace SpreadsheetGUI
                 this.BackColor = ColorTranslator.FromHtml("#303030");
                 toolStripNightModeButton.Checked = true;
             }
+        }
+
+        private void UndoButton_Click(object sender, EventArgs e)
+        {
+            // Sending undo request to server via JSon
+            UndoRequest r = new UndoRequest("undo");
+            string request = JsonConvert.SerializeObject(r) + "\n";
+            NC.SendData(request);
+        }
+
+        private void RevertButton_Click(object sender, EventArgs e)
+        {
+            // Sending revert request to server via JSon
+            spreadsheetPanel1.GetSelection(out int col, out int row);
+            RevertRequest r = new RevertRequest("revertCell", spreadsheetPanel1.ConvertCellName(col, row));
+            string request = JsonConvert.SerializeObject(r) + "\n";
+            NC.SendData(request);
         }
     }
 }
