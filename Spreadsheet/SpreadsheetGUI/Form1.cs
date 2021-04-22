@@ -60,6 +60,14 @@ namespace SpreadsheetGUI
             }
 
             // TODO:IF SEL SELECTION REQUEST
+            if (message.type.Equals("cellSelected"))
+            {
+                int col = spreadsheetPanel1.GetCellNameCol(message.cellName);
+                int row = spreadsheetPanel1.GetCellNameRow(message.cellName);
+                spreadsheetPanel1.ChangeUserSelection(col, row, message.selectorID); //Might want to actually send the username, but might want to keep it this way, not sure yet
+            }
+
+            
 
             if (message.type.Equals("requestError"))
             {
