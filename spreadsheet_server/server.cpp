@@ -17,13 +17,17 @@
 #include <netinet/in.h>
 #include <sys/time.h> 
 #include <string>
+#include <thread>
+#include "Spreadsheet.h"
 	
 #define TRUE 1
 #define FALSE 0
 #define PORT 1100
 #define BUFFER_SIZE 1024
 
-int handle_connection(int sd, char buffer[], int valread);
+std::vector<Spreadsheet> s_list;
+
+void handle_connection(int sd);
 
 int main(int argc , char *argv[])
 {
@@ -108,20 +112,24 @@ int main(int argc , char *argv[])
 		{
 			// socket descriptor, the I.D. of a clients socket
 			sd = client_socket[i];
+std::cout << "1" << std::endl;
 				
 			// if valid socket descriptor then add to read list
 			if(sd > 0)
 				FD_SET( sd , &readfds);
+std::cout << "2" << std::endl;
 				
 			// highest file descriptor number, need it for the select function
 			if(sd > max_sd)
 				max_sd = sd;
+std::cout << "3" << std::endl;
 		}
 	
 		// wait for an activity on one of the sockets , timeout is NULL ,
 		// so wait indefinitely
 		activity = select( max_sd + 1 , &readfds , NULL , NULL , NULL);
 	
+std::cout << "4" << std::endl;
 		if ((activity < 0) && (errno!=EINTR))
 		{
 			printf("select error");
@@ -131,6 +139,7 @@ int main(int argc , char *argv[])
 		// then its an incoming connection
 		if (FD_ISSET(master_socket, &readfds))
 		{
+std::cout << "5" << std::endl;
 			if ((new_socket = accept(master_socket,
 					(struct sockaddr *)&address, (socklen_t*)&addrlen))<0)
 			{
@@ -141,12 +150,15 @@ int main(int argc , char *argv[])
 			// inform user of socket number - used in send and receive commands
 			printf("New connection , socket fd is %d , ip is : %s , port : %d\n" , new_socket , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
 		
+		    std::thread connect_thread(handle_connection, new_socket);
+		    
 			//TODO: HANDSHAKE
-			if((new_socket = handle_connection(new_socket, buffer, valread)) < 0 )
+			/*if((new_socket = handle_connection(new_socket, buffer, valread)) < 0 )
 			{
 				printf("%s\n", "handshake failure");
 				continue;
 			}	
+			*/
 			// add new socket to array of sockets
 			for (i = 0; i < max_clients; i++)
 			{
@@ -198,32 +210,48 @@ int main(int argc , char *argv[])
 }
 
 
-int handle_connection(int newfd, char buf[], int nbytes)
+void handle_connection(int newfd)
 {
+    // create a buffer to recieve messages
+    char buf[BUFFER_SIZE];
+    
 	// make sure our buffer is clean
-	bzero(buf, 1024);
+	bzero(buf, BUFFER_SIZE);
+	
+	// tracks the number of bytes being read
+	int nbytes = 0;
 
     // read the first thing from the client, the username
-    nbytes = read(newfd, buf, 1024);
+    nbytes = read(newfd, buf, BUFFER_SIZE);
     if(nbytes < 0)
 	{
    		perror("Error recieving client's name");
-		return -1;
+		return;
 	}
     if(nbytes == 0)
    	{  
 		close(newfd);
-        return -1;
+        return;
     }
 
     // print the clients name to the console
     printf("%s", buf);
     
     // clear our buffer out
-	bzero(buf, 1024);
+	bzero(buf, BUFFER_SIZE);
 
     // send the client the list of possible spreadsheets
-    char *file_list = "Beachhouse\nBroadcast\nBlouse\n\n";
+    string file_names = "";
+    for(int i = 0; i < s_list.size(); i++)
+    {
+        file_names += s_list[i].Spreadsheet::get_name();
+        file_names += "\n";
+    }
+    file_names += "\n";
+    
+    char *file_list = const_cast<char*>(file_names.c_str());
+    
+    //char *file_list = "Beachhouse\nBroadcast\nBlouse\n\n";
     if(send(newfd, file_list, strlen(file_list), 0) < 0)
         perror("Error sending spreadsheet names");
    
@@ -232,17 +260,15 @@ int handle_connection(int newfd, char buf[], int nbytes)
     if(nbytes < 0)
     {
 	    perror("Error recieving spreadsheet name from client");
-  		return -1;
+  		return;
 	}
     if(nbytes == 0)
     {
        close(newfd);
-       return -1;
+       return;
     }
 
     // print the name of the spreadsheet
     printf("%s", buf);
-
-    return newfd;
 }
 
