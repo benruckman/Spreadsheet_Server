@@ -1,118 +1,244 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>
-#include<unistd.h>
-#include<sys/types.h>
-#include<sys/socket.h>
-#include<netinet/in.h>
-#include<pthread.h>
-#include<string>
+// Server for networked spreadsheet
+// Networking code from here: 
+// https://www.geeksforgeeks.org/socket-programming-in-cc-handling-multiple-clients-on-server-without-multi-threading/
+// 
+// 
 
+#include <stdio.h>
+#include <string.h> 
+#include <stdlib.h>
+#include <errno.h>
+#include <unistd.h> 
+#include <arpa/inet.h> 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <sys/time.h> 
+#include <string>
+	
+#define TRUE 1
+#define FALSE 0
 #define PORT 1100
 
-using namespace std;
+int handle_connection(int sd, char buffer[], int valread);
 
-void accept_connections(int socket_fd, struct sockaddr * addr, socklen_t* addrlen);
-
-main(int argc, char const *argv[])
+int main(int argc , char *argv[])
 {
-  // Initialize variables
-  int socket_fd;
-  int chars_read;
-  int new_socket;
-  char buffer[1024] = {0};
-  struct sockaddr_in server_address;
-  int address_length = sizeof(server_address);
+	int opt = TRUE;
+	int master_socket;
+	int addrlen ;
+	int new_socket;
+	int client_socket[30];
+	int	max_clients = 30;
+	int activity;
+	int i; 
+	int valread;
+	int sd;
+	int max_sd;
+	struct sockaddr_in address;
+		
+	char buffer[1024]; 
+		
+	// set of socket descriptors
+	fd_set readfds;
+		
+	// a testing message
+	char *message = "{\"messageType\" : \"cellUpdated\", \"cellName\" : \"a1\", \"contents\" : \"=1 + 3\"}\n";
+	
+	// initialise all client_socket[] to 0 so not checked
+	for (i = 0; i < max_clients; i++)
+	{
+		client_socket[i] = 0;
+	}
+		
+	// create a master socket (i.e. the listener)
+	if( (master_socket = socket(AF_INET , SOCK_STREAM , 0)) == 0)
+	{
+		perror("socket failed");
+		exit(EXIT_FAILURE);
+	}
+	
+	// set master socket to allow multiple connections 
+	if( setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt)) < 0 )
+	{
+		perror("setsockopt");
+		exit(EXIT_FAILURE);
+	}
+	
+	//type of socket created
+	address.sin_family = AF_INET;
+	address.sin_addr.s_addr = INADDR_ANY;
+	address.sin_port = htons( PORT );
+		
+	// bind the socket to localhost port 1100
+	if (bind(master_socket, (struct sockaddr *)&address, sizeof(address))<0)
+	{
+		perror("bind failed");
+		exit(EXIT_FAILURE);
+	}
 
-  // Create socket
-  socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-
-  // Check for error
-  if(socket_fd < 0)
-  {
-    perror("Socket failed to open.");
-    exit(EXIT_FAILURE);
-  }
-  
-  // Still learning what setsocketopt does. We may uncomment in the final version
-  // setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))
-
-  // Set up server address structure
-  server_address.sin_family = AF_INET;
-  server_address.sin_addr.s_addr = INADDR_ANY;
-  server_address.sin_port = htons( PORT );
-  
-  // Binding the socket to the host address
-  if(bind(socket_fd, (struct sockaddr *) &server_address, sizeof(server_address)) < 0)
-  {
-    perror("Binding the socket failed.");
-    exit(EXIT_FAILURE);
-  }
-
-  // Begins listening for new connections
-  if(listen(socket_fd, 5) < 0)
-  {
-    perror("Error while listening.");
-    exit(EXIT_FAILURE);
-  }
- 
-  // Accepts a new connection
-  if ((new_socket = accept(socket_fd, (struct sockaddr *) &server_address, (socklen_t *) &address_length)) < 0)
-  {
-    perror("Error while accepting.");
-    exit(EXIT_FAILURE);
-  }
-
-  // Read the first message from client. Message should be username
-  chars_read = read(new_socket, buffer, 1024);
-  printf("%s\n", buffer);
- 
-  string username = "";
-  char current =  buffer[0];
-  int i = 0;
-  while(current != '\n')
-  {
-    username += current;
-    i++;
-    current = buffer[i];
-  }
-
-  // Send a list of file names
-  char *file_list= "Spreadsheet1\nDonnieDarko\nVinylRecordsAreCool\n\n";
-  send(new_socket, file_list, sizeof(file_list), 0);
-  chars_read = read(new_socket, buffer, 1024);
-  printf("%s\n", buffer);
-
-  // Read the second message from client. Message should be the file name
-  string file_name = "";
-  current = buffer[0];
-  i = 0;
-  while(current != '\n')
-  {
-    file_name += current;
-    i++;
-    current = buffer[i];
-  }
-
-  // Still learning about multithreading. We may uncomment in the final version
-  //pthread_t t;  
-  //pthread_create(t, NULL, accept_connections, socket_fd, (struct sockaddr *) &server_address, (socklen_t*) sizeof(server_address));
-  sleep(5000);
-  return 0;
+	printf("Listener on port %d \n", PORT);
+		
+	// try to specify maximum of 5 pending connections for the master socket
+	if (listen(master_socket, 5) < 0)
+	{
+		perror("listen");
+		exit(EXIT_FAILURE);
+	}
+		
+	// accept the incoming connection
+	addrlen = sizeof(address);
+	puts("Waiting for connections ...");
+		
+	while(TRUE)
+	{
+		// clear the socket set of current reads
+		FD_ZERO(&readfds);
+	
+		// add master socket to set, so we know of any pending connections
+		FD_SET(master_socket, &readfds);
+		// update the size accordingly
+		max_sd = master_socket;
+			
+		// add additional sockets to set
+		for ( i = 0 ; i < max_clients ; i++)
+		{
+			// socket descriptor, the I.D. of a clients socket
+			sd = client_socket[i];
+				
+			// if valid socket descriptor then add to read list
+			if(sd > 0)
+				FD_SET( sd , &readfds);
+				
+			// highest file descriptor number, need it for the select function
+			if(sd > max_sd)
+				max_sd = sd;
+		}
+	
+		// wait for an activity on one of the sockets , timeout is NULL ,
+		// so wait indefinitely
+		activity = select( max_sd + 1 , &readfds , NULL , NULL , NULL);
+	
+		if ((activity < 0) && (errno!=EINTR))
+		{
+			printf("select error");
+		}
+			
+		// If something happened on the master socket,
+		// then its an incoming connection
+		if (FD_ISSET(master_socket, &readfds))
+		{
+			if ((new_socket = accept(master_socket,
+					(struct sockaddr *)&address, (socklen_t*)&addrlen))<0)
+			{
+				perror("accept");
+				exit(EXIT_FAILURE);
+			}
+			
+			// inform user of socket number - used in send and receive commands
+			printf("New connection , socket fd is %d , ip is : %s , port : %d\n" , new_socket , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
+		
+			//TODO: HANDSHAKE
+			if((new_socket = handle_connection(new_socket, buffer, valread)) < 0 )
+			{
+				printf("%s\n", "handshake failure");
+				continue;
+			}	
+			// add new socket to array of sockets
+			for (i = 0; i < max_clients; i++)
+			{
+				//if position is empty in our array, fill it with the new socket
+				if( client_socket[i] == 0 )
+				{
+					client_socket[i] = new_socket;
+					printf("Adding to list of sockets as %d\n" , i);
+					break;
+				}
+			}
+		}
+			
+		// else its some IO operation on some other socket
+		for (i = 0; i < max_clients; i++)
+		{
+			sd = client_socket[i];
+				
+			if (FD_ISSET( sd , &readfds))
+			{
+				// Check if it was for closing , and also read the
+				// incoming message
+				if ((valread = read( sd , buffer, 1024)) <= 0)
+				{
+					//Somebody disconnected , get his details and print
+					getpeername(sd , (struct sockaddr*)&address , \
+						(socklen_t*)&addrlen);
+					printf("Host disconnected , ip %s , port %d \n" ,
+						inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
+						
+					//Close the socket and mark as 0 in list for reuse
+					close( sd );
+					client_socket[i] = 0;
+				}
+					
+				// Echo back the message that came in
+				else
+				{
+					// set the string terminating NULL byte on the end
+					// of the data read
+				//	buffer[valread] = '\0';
+					send(sd , message , strlen(message) , 0 );
+				}
+			}
+		}
+	}
+		
+	return 0;
 }
 
-/*
- * Method is used to accept clients on its own thread. This method is currently not used.
- */
-void accept_connections(int socket_fd, struct sockaddr * addr, socklen_t* addrlen)
+
+int handle_connection(int newfd, char buf[], int nbytes)
 {
-  int result;
-  while(true)
-  {
-    if(result = accept(socket_fd, addr, addrlen) < 0)
-    {
-      perror("Accepting the connection failed.");
-      exit(EXIT_FAILURE);
+	// make sure our buffer is clean
+	bzero(buf, 1024);
+
+    // read the first thing from the client, the username
+    nbytes = read(newfd, buf, 1024);
+    if(nbytes < 0)
+	{
+   		perror("Error recieving client's name");
+		return -1;
+	}
+    if(nbytes == 0)
+   	{  
+		close(newfd);
+        return -1;
     }
-  }
+
+    // print the clients name to the console
+    printf("%s", buf);
+    
+    // clear our buffer out
+	bzero(buf, 1024);
+
+    // send the client the list of possible spreadsheets
+    char *file_list = "Beachhouse\nBroadcast\nBlouse\n\n";
+    if(send(newfd, file_list, strlen(file_list), 0) < 0)
+        perror("Error sending spreadsheet names");
+   
+	// read the name of the spreadsheet the client wishes to edit
+    nbytes = read(newfd, buf, 1024);
+    if(nbytes < 0)
+    {
+	    perror("Error recieving spreadsheet name from client");
+  		return -1;
+	}
+    if(nbytes == 0)
+    {
+       close(newfd);
+       return -1;
+    }
+
+    // print the name of the spreadsheet
+    printf("%s", buf);
+
+    return newfd;
 }
