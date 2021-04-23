@@ -1,11 +1,4 @@
-
-// Server for networked spreadsheet
-// Networking code from here: 
-// https://www.geeksforgeeks.org/socket-programming-in-cc-handling-multiple-clients-on-server-without-multi-threading/
-// 
-// 
-
-
+#include <iostream>
 #include <stdio.h>
 #include <string.h> 
 #include <stdlib.h>
@@ -17,21 +10,32 @@
 #include <netinet/in.h>
 #include <sys/time.h> 
 #include <string>
+#include <queue>
+
 	
 #define TRUE 1
 #define FALSE 0
 #define PORT 1100
 #define BUFFER_SIZE 1024
 
-int handle_connection(int sd, char buffer[], int valread);
 
+// we might need to lock up some things
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+// handles the handshake
+void* handle_connection(void* sd);
+
+// list of all of our currently connected clients
+int client_socket[30];
+
+// the main entry point of our application
 int main(int argc , char *argv[])
 {
 	int opt = TRUE;
 	int master_socket;
 	int addrlen ;
 	int new_socket;
-	int client_socket[30];
+	//int client_socket[30];
 	int	max_clients = 30;
 	int activity;
 	int i; 
@@ -39,6 +43,7 @@ int main(int argc , char *argv[])
 	int sd;
 	int max_sd;
 	struct sockaddr_in address;
+	
 		
 	char buffer[1024]; 
 		
@@ -97,152 +102,169 @@ int main(int argc , char *argv[])
 	{
 		// clear the socket set of current reads
 		FD_ZERO(&readfds);
-	
+
 		// add master socket to set, so we know of any pending connections
 		FD_SET(master_socket, &readfds);
+		timeval timeout;	
+		timeout.tv_sec = 0;
+    	timeout.tv_usec = 50;
+		
 		// update the size accordingly
 		max_sd = master_socket;
 			
 		// add additional sockets to set
 		for ( i = 0 ; i < max_clients ; i++)
-		{
-			// socket descriptor, the I.D. of a clients socket
+		{			
+			pthread_mutex_lock(&mutex);
 			sd = client_socket[i];
-				
-			// if valid socket descriptor then add to read list
+			pthread_mutex_unlock(&mutex);
 			if(sd > 0)
+			{
 				FD_SET( sd , &readfds);
-				
+			}
 			// highest file descriptor number, need it for the select function
 			if(sd > max_sd)
 				max_sd = sd;
 		}
-	
+
 		// wait for an activity on one of the sockets , timeout is NULL ,
 		// so wait indefinitely
-		activity = select( max_sd + 1 , &readfds , NULL , NULL , NULL);
-	
+		activity = select( max_sd + 1 , &readfds , NULL , NULL , &timeout);
+		
 		if ((activity < 0) && (errno!=EINTR))
 		{
 			printf("select error");
 		}
-			
+		else if(activity == 0)
+		{	
+			continue;
+		}
+		else
+		{	
 		// If something happened on the master socket,
 		// then its an incoming connection
-		if (FD_ISSET(master_socket, &readfds))
-		{
-			if ((new_socket = accept(master_socket,
-					(struct sockaddr *)&address, (socklen_t*)&addrlen))<0)
+			if (FD_ISSET(master_socket, &readfds))
 			{
-				perror("accept");
-				exit(EXIT_FAILURE);
+				if ((new_socket = accept(master_socket,(struct sockaddr *)&address, (socklen_t*)&addrlen))<0)
+				{
+					perror("accept");
+					exit(EXIT_FAILURE);
+				}
+			
+				// inform user of socket number - used in send and receive commands
+				printf("New connection , socket fd is %d , ip is : %s , port : %d\n" , new_socket , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
+			
+				pthread_t pid;		
+				if(pthread_create(&pid, NULL, handle_connection, (void*) &new_socket) != 0 )
+				{
+					std::cout << "Handshake Failure" << std::endl;
+				}
+				pthread_detach(pid);	
 			}
 			
-			// inform user of socket number - used in send and receive commands
-			printf("New connection , socket fd is %d , ip is : %s , port : %d\n" , new_socket , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
-		
-			//TODO: HANDSHAKE
-			if((new_socket = handle_connection(new_socket, buffer, valread)) < 0 )
-			{
-				printf("%s\n", "handshake failure");
-				continue;
-			}	
-			// add new socket to array of sockets
+			// else its some IO operation on some other socket
 			for (i = 0; i < max_clients; i++)
 			{
-				//if position is empty in our array, fill it with the new socket
-				if( client_socket[i] == 0 )
+				pthread_mutex_lock(&mutex);
+				sd = client_socket[i];
+				pthread_mutex_unlock(&mutex);
+
+				if (FD_ISSET( sd , &readfds))
 				{
-					client_socket[i] = new_socket;
-					printf("Adding to list of sockets as %d\n" , i);
-					break;
-				}
-			}
-		}
-			
-		// else its some IO operation on some other socket
-		for (i = 0; i < max_clients; i++)
-		{
-			sd = client_socket[i];
-				
-			if (FD_ISSET( sd , &readfds))
-			{
-				// Check if it was for closing , and also read the
-				// incoming message
-				if ((valread = read( sd , buffer, 1024)) <= 0)
-				{
-					//Somebody disconnected , get his details and print
-					getpeername(sd , (struct sockaddr*)&address , \
+					// Check if it was for closing , and also read the
+					// incoming message
+					if ((valread = read( sd , buffer, 1024)) <= 0)
+					{
+						//Somebody disconnected , get his details and print
+						getpeername(sd , (struct sockaddr*)&address , \
 						(socklen_t*)&addrlen);
-					printf("Host disconnected , ip %s , port %d \n" ,
+						printf("Host disconnected , ip %s , port %d \n" ,
 						inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
 						
-					//Close the socket and mark as 0 in list for reuse
-					close( sd );
-					client_socket[i] = 0;
+						//Close the socket and mark as 0 in list for reuse
+						close( sd );
+						client_socket[i] = 0;
+					}
+					// Echo back the message that came in
+					else
+					{
+						send(sd , message , strlen(message) , 0 );
+					}	
 				}
-					
-				// Echo back the message that came in
-				else
-				{
-					// set the string terminating NULL byte on the end
-					// of the data read
-				//	buffer[valread] = '\0';
-					send(sd , message , strlen(message) , 0 );
-				}
-			}
+			}	
 		}
 	}
-		
 	return 0;
 }
 
-
-int handle_connection(int newfd, char buf[], int nbytes)
+// handles the handshake process 
+void* handle_connection(void* sd)
 {
-	// make sure our buffer is clean
-	bzero(buf, 1024);
+	int newfd = *(int*)sd;
+	char buf[BUFFER_SIZE];
+	int nbytes;
 
+	bzero(buf, BUFFER_SIZE);
+	
     // read the first thing from the client, the username
-    nbytes = read(newfd, buf, 1024);
+    nbytes = read(newfd, buf, BUFFER_SIZE);
     if(nbytes < 0)
 	{
-   		perror("Error recieving client's name");
-		return -1;
+   		close(newfd);
+		pthread_exit(0);
 	}
     if(nbytes == 0)
    	{  
 		close(newfd);
-        return -1;
+        pthread_exit(0);
     }
 
     // print the clients name to the console
     printf("%s", buf);
     
     // clear our buffer out
-	bzero(buf, 1024);
+	bzero(buf, BUFFER_SIZE);
 
     // send the client the list of possible spreadsheets
     char *file_list = "Beachhouse\nBroadcast\nBlouse\n\n";
-    if(send(newfd, file_list, strlen(file_list), 0) < 0)
-        perror("Error sending spreadsheet names");
-   
+    send(newfd, file_list, strlen(file_list), 0);
+        
 	// read the name of the spreadsheet the client wishes to edit
-    nbytes = read(newfd, buf, 1024);
+    nbytes = read(newfd, buf, BUFFER_SIZE);
     if(nbytes < 0)
-    {
-	    perror("Error recieving spreadsheet name from client");
-  		return -1;
+    {	
+		close(newfd);
+  		pthread_exit(0);
 	}
     if(nbytes == 0)
     {
        close(newfd);
-       return -1;
+       pthread_exit(0);
     }
 
     // print the name of the spreadsheet
     printf("%s", buf);
+	
+	//TODO: SEND STATE OF SPREADSHEET
 
-    return newfd;
+	// add new socket to array of sockets
+	for (int i = 0; i < sizeof(client_socket); i++)
+	{
+		pthread_mutex_lock(&mutex);
+		int sd = client_socket[i];
+		pthread_mutex_unlock(&mutex);
+		//if position is empty in our array, fill it with the new socket
+		if(sd == 0 )
+		{
+			pthread_mutex_lock(&mutex);
+			client_socket[i] = newfd;
+			pthread_mutex_unlock(&mutex);
+			printf(" added to list of client sockets at index %d\n" , i);
+			break;
+		}
+	}
+	pthread_exit(0);
+	// we are done, exit the thread
+	//pthread_exit(0);
+ 	return 0;
 }
-
