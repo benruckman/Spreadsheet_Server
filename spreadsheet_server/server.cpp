@@ -1,6 +1,5 @@
 #include <iostream>
 #include <stdio.h>
-#include <string.h> 
 #include <stdlib.h>
 #include <errno.h>
 #include <unistd.h> 
@@ -10,12 +9,15 @@
 #include <netinet/in.h>
 #include <sys/time.h> 
 #include <string>
-#include "user.h"
+#include <thread>
 #include <vector>
+#include "spreadsheet.h"
+#include "user.h"
 
 #define TRUE 1
 #define PORT 1100
 #define BUFFER_SIZE 1024
+
 
 // used to lock critical sections of code, mainly clients[].
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -108,6 +110,7 @@ int main(int argc, char* argv[])
 			continue;
 		else
 		{
+
 			// if something happened on the master socket, it is a new connection
 			if (FD_ISSET(master_socket, &readfds))
 			{
@@ -235,6 +238,7 @@ void* handle_connection(void* sd)
 	pthread_mutex_unlock(&mutex);
 	pthread_exit(0);
 	return 0;
+
 }
 
 // exits the program printing an error message
