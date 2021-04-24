@@ -36,4 +36,4 @@ RUN apt-get -y update && apt-get -y install \
 
 COPY . /Server
 
-RUN cd /Server && g++ -std=c++11 -pthread server.cpp user.cpp
+RUN cd /Server && g++ -std=c++11 -pthread spreadsheet.cpp server.cpp user.cpp
