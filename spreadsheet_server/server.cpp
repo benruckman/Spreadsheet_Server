@@ -18,14 +18,16 @@
 #include <sys/time.h> 
 #include <string>
 #include <thread>
-#include "Spreadsheet.h"
+#include <vector>
+#include "spreadsheet.h"
+
 	
 #define TRUE 1
 #define FALSE 0
 #define PORT 1100
 #define BUFFER_SIZE 1024
 
-std::vector<Spreadsheet> s_list;
+std::vector<spreadsheet> s_list;
 
 void handle_connection(int sd);
 
@@ -112,24 +114,20 @@ int main(int argc , char *argv[])
 		{
 			// socket descriptor, the I.D. of a clients socket
 			sd = client_socket[i];
-std::cout << "1" << std::endl;
 				
 			// if valid socket descriptor then add to read list
 			if(sd > 0)
 				FD_SET( sd , &readfds);
-std::cout << "2" << std::endl;
 				
 			// highest file descriptor number, need it for the select function
 			if(sd > max_sd)
 				max_sd = sd;
-std::cout << "3" << std::endl;
 		}
 	
 		// wait for an activity on one of the sockets , timeout is NULL ,
 		// so wait indefinitely
 		activity = select( max_sd + 1 , &readfds , NULL , NULL , NULL);
 	
-std::cout << "4" << std::endl;
 		if ((activity < 0) && (errno!=EINTR))
 		{
 			printf("select error");
@@ -139,7 +137,6 @@ std::cout << "4" << std::endl;
 		// then its an incoming connection
 		if (FD_ISSET(master_socket, &readfds))
 		{
-std::cout << "5" << std::endl;
 			if ((new_socket = accept(master_socket,
 					(struct sockaddr *)&address, (socklen_t*)&addrlen))<0)
 			{
@@ -244,7 +241,7 @@ void handle_connection(int newfd)
     string file_names = "";
     for(int i = 0; i < s_list.size(); i++)
     {
-        file_names += s_list[i].Spreadsheet::get_name();
+        file_names += s_list[i].spreadsheet::get_name();
         file_names += "\n";
     }
     file_names += "\n";
