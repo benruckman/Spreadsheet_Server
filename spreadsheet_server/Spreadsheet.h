@@ -1,6 +1,4 @@
-/*
- Header file for spreadsheet class declarations
- */
+
 //needs to create DependencyGraph class to use its helper functions
 
 #ifndef SPREADSHEET_H
@@ -48,6 +46,8 @@ class spreadsheet
   
     // Constructor for Spreadsheet class
     spreadsheet(string name);
+
+    spreadsheet();
     
     // destructor
     ~spreadsheet();
@@ -77,7 +77,7 @@ class spreadsheet
     string undo_spreadsheet();
     
     // Adds a user to the spreadsheet
-    void add_user(user new_user);
+    void add_user(user* new_user);
     
     // Removes a user when they are not connected to the spreadsheet anymore
     void remove_user(int id);
