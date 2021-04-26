@@ -15,7 +15,10 @@
 #include <boost/algorithm/string.hpp>
 #include "spreadsheet.h"
 #include <set>
-
+#include <iterator>
+#include <algorithm>
+#include <regex>
+#include <tuple>
 // used to lock critical sections of code, like the queue
 pthread_mutex_t mutexqueue = PTHREAD_MUTEX_INITIALIZER;
 
@@ -39,7 +42,7 @@ spreadsheet::spreadsheet(string name)
   queue<cell> history;
   this->cell_history = history;
     
-  queue<string> messages;
+  queue<tuple<string, string, string>> messages;
   this->message_queue = messages;
   
   vector<user> users;
@@ -93,9 +96,9 @@ void spreadsheet::set_name(string name)
  */
 void spreadsheet::add_message(string new_message)
 {
-  pthread_mutex_lock(&mutexqueue);
-  this->message_queue.push(new_message);
-  pthread_mutex_unlock(&mutexqueue);
+  // pthread_mutex_lock(&mutexqueue);
+  message_queue.push(deserialize_message(new_message));
+  // pthread_mutex_unlock(&mutexqueue);
   return;
 }
 
@@ -143,7 +146,6 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 {
   //used to keep the previous contents of a cell
   string previous_contents = "";
-  
   if(undo == false && non_empty_cells.size() != 0)
   {
     for(map<string, string>::iterator it = non_empty_cells.begin(); it != non_empty_cells.end(); it++)
@@ -154,17 +156,30 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 	      //it->second is the value associated with the key
 	      previous_contents = it->second;
 	      set<string> newDependents;
-	      
+	      get_dependency_graph().replaceDependents(name, newDependents);
       }
     }
-    
     non_empty_cells[name] = content;
     //needs to check if the content is a formula, if it is, then we would need a way to return variable in the formula
-    //then check for circular dependencies and replace dependents and add dependencies 
-    // if(content[0] == "=")
-    
-    return true; // TODO: Determine correct return value
-  }
+    //then check for circular dependencies and replace dependents and add dependencies
+    /* 
+    if(content[0] == "=")
+    {
+      vector<string> var = get_variables(content);
+      set<string> dependents;
+      for(int i = 0; i < var.size(); i++)
+      {
+	dependents.insert(name, var[i]);
+      }
+      get_dependency_graph().addDependents(name, dependents);
+      cell previousCell;
+      previousCell.name = name;
+      previousCell.content = previous_contents;
+      cell_history.push();
+      set_contents_of_cell(name, previous_contents, true);
+    */
+      return true;
+    }
 }
 
 
@@ -280,13 +295,16 @@ string spreadsheet::normalize(string cell_contents)
 /*
  * TODO: Document
  */
+/*
 bool spreadsheet::process_messages()
 {
-  pthread_mutex_lock(&mutexqueue);
+
+   std::cout <<"Beginning size: " << message_queue.size() << std::endl;
+   pthread_mutex_lock(&mutexqueue);
   while(message_queue.size()> 0)
   {
     string message = message_queue.front();
-    this->message_queue.pop();
+    message_queue.pop();
     std::cout << message << std::endl;
     int n = message.length();
     // manipulate message if it is a valid request
@@ -294,15 +312,17 @@ bool spreadsheet::process_messages()
     strcpy(m, message.c_str());
     for(vector<user>::iterator it = user_list.begin(); it != user_list.end(); it++)
     {
-        // send the message to connected users
+      std::cout << "sending message to user " << it->get_username() << std::endl;
+      // process this message, and send good one back
       char* mess = "{\"messageType\" : \"cellUpdated\", \"cellName\" : \"a1\", \"contents\" : \"=1 + 3\"}\n";
       send(it->get_socket(), mess, strlen(mess), 0);
     }
   }
   pthread_mutex_unlock(&mutexqueue);
+   std::cout <<"size: " << message_queue.size() << std::endl;
   return true;
 }
-
+*/
 /*
  *TODO: Document
  */
@@ -331,4 +351,94 @@ vector<string> spreadsheet::get_variables(string contents)
 DependencyGraph spreadsheet::get_dependency_graph()
 {
   return g;
+}
+
+/*
+ *TODO: Document
+ */
+string spreadsheet::serialize_cell_update(string messageType, string cellName, string contents)
+{
+  string output = "{messageType: \"" + messageType + "\", cellName: " + cellName + ", contents: " + contents + "}";
+  return output;
+}
+/*
+ *TODO: Document
+ */
+string spreadsheet::serialize_cell_selected(string messageType, string cellName, int selector, string selectorName)
+{
+  string output = "{messageType: \"" + messageType + "\", cellName: " + cellName + ", selector: " + std::to_string(selector) + ", selectorName: " + selectorName + "}";
+  return output;
+} 
+/*
+ *TODO: Document
+ */
+string spreadsheet::serialize_disconnected(string messageType, int user)
+{
+  string output = "{messageType: \"" + messageType + "\", user: " + std::to_string(user) + "}";
+  return output;
+} 
+/*
+ *TODO: Document
+ */
+string spreadsheet::serialize_invalid_request(string messageType, string cellName, string message)
+{
+  string output = "{messageType: \"" + messageType + "\", cellName: " + cellName + ", message: " + message + "}";
+  return output;
+} 
+/*
+ *TODO: Document
+ */
+string spreadsheet::serialize_server_shutdown(string messageType, string message)
+{
+  string output = "{messageType: \"" + messageType + "\", message: " + message + "}";
+  return output;
+} 
+
+/*
+ *TODO: Document
+ */
+tuple<string, string, string> spreadsheet::deserialize_message(string input)
+{
+  tuple <string, string, string> result;
+  // std::regex regex(",");
+  //std::vector<std::string> firstOutput(std::sregex_token_iterator(input.begin(), input.end(), regex, -1), std::sregex_token_iterator());
+  // std::regex another_regex(":");
+  //std::vector<std::string> secondOutput(std::sregex_token_iterator(input.begin(), input.end(), another_regex, -1), std::sregex_token_iterator());
+  vector<string> firstOutput = split(input, ',');
+  string secondInput = "";
+  for(int i = 0; i < firstOutput.size(); i++)
+  {
+    secondInput += firstOutput[i];
+  }
+  vector<string> secondOutput = split(secondInput, ':');
+  if(secondOutput.size() == 6)
+  {
+    result = make_tuple(secondOutput[1], secondOutput[3], secondOutput[5].substr(0, secondOutput[5].length() - 1));
+  }  
+  if(secondOutput.size() == 4)
+  {
+    result = make_tuple(secondOutput[1], secondOutput[3].substr(0, secondOutput[3].length() - 1), NULL);
+  }
+  if(secondOutput.size() == 2)
+  {
+    result = make_tuple(secondOutput[1].substr(0, secondOutput[1].length() - 1), NULL, NULL);
+  }
+  return result;
+} 
+
+queue<tuple<string, string, string>> spreadsheet::get_message_queue()
+{
+  return this->message_queue;
+}
+
+vector<string> spreadsheet::split(string str, char delimeter)
+{
+  std::stringstream ss(str);
+  string item;
+  vector<string> splittedStrings;
+  while(std::getline(ss, item, delimeter))
+  {
+    splittedStrings.push_back(item);
+  }
+    return splittedStrings;
 }
