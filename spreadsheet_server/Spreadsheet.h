@@ -10,6 +10,7 @@
 #include <stack>
 #include <map>
 #include "user.h"
+#include "DependencyGraph.h"
 #include <fstream>
 #include <ostream>
 
@@ -41,6 +42,8 @@ class spreadsheet
     
     // Keeps track of all the users that are connected to the spreadsheet
     vector<user> user_list;
+    //dependency graph to keep track of cells that a certain cell depend on
+    DependencyGraph g;
     
   public :
   
@@ -93,6 +96,12 @@ class spreadsheet
     
     // This method will process the request sent by the clients, this method will apply the requests and the server can send the message back to the client
     bool process_messages();
+
+    //returns the value of a cell if 
+    vector<string> get_variables(string contents);
+
+    //returns the dependency graph 
+    DependencyGraph get_dependency_graph();
 };
 
 #endif

@@ -11,7 +11,10 @@
 #include <string>
 #include <string.h>
 #include <stdio.h>
+#include <bits/stdc++.h>
+#include <boost/algorithm/string.hpp>
 #include "spreadsheet.h"
+#include <set>
 
 // used to lock critical sections of code, like the queue
 pthread_mutex_t mutexqueue = PTHREAD_MUTEX_INITIALIZER;
@@ -150,7 +153,8 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
       {
 	      //it->second is the value associated with the key
 	      previous_contents = it->second;
-	      //needs to replace the dependents from the dependency graph
+	      set<string> newDependents;
+	      
       }
     }
     
@@ -225,7 +229,7 @@ void spreadsheet::save()
   for(map<string, string>::iterator it = non_empty_cells.begin(); it != non_empty_cells.end(); it++)
   { 
     //it->first is the cell name in the map, it->second is the contents of the cell in the map
-    string cells = it->first + " : " + it->second + "\n";
+    string cells = it->first + " " + it->second + "\n";
     f<<cells;
   }
   
@@ -297,4 +301,34 @@ bool spreadsheet::process_messages()
   }
   pthread_mutex_unlock(&mutexqueue);
   return true;
+}
+
+/*
+ *TODO: Document
+ */
+vector<string> spreadsheet::get_variables(string contents)
+{
+  vector<string> input;
+  vector<string> variables;
+  //REFERENCE: geeksforgeeks.org/boostsplit-c-library/
+  boost::split(input, contents, boost::is_any_of("-|+|/|*|="));
+  for(vector<string>::iterator it = input.begin(); it != input.end(); it++)
+  {
+    //REFERENCE: tutorialspoint.com/c_standard_library/c_function_atoi.htm
+    //atoi returns 0 if the string is not converted to an integer, thus it is a variable
+    int val = atoi((*it).c_str());
+    if(val == 0)
+    {
+      variables.push_back(*it);
+    }
+  }
+  return variables;
+}
+
+/*
+ *TODO:Document
+ */
+DependencyGraph spreadsheet::get_dependency_graph()
+{
+  return g;
 }
