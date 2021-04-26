@@ -84,6 +84,7 @@ namespace SpreadsheetGUI
             if (message.type.Equals("serverError"))
             {
                 MessageBox.Show("Server error: " + message.errorMessage);
+                Close();
             }
 
             return;

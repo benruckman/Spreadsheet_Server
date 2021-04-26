@@ -1,4 +1,3 @@
-
 //needs to create DependencyGraph class to use its helper functions
 
 #ifndef SPREADSHEET_H
@@ -13,6 +12,8 @@
 #include "DependencyGraph.h"
 #include <fstream>
 #include <ostream>
+#include <tuple>
+#include <string>
 
 using namespace std;
 
@@ -38,7 +39,7 @@ class spreadsheet
     queue<cell> cell_history;
     
     // Keeps track of all request messages that clients send to the server
-    queue<string> message_queue;
+    queue<tuple<string, string, string>> message_queue;
     
     // Keeps track of all the users that are connected to the spreadsheet
     vector<user> user_list;
@@ -108,6 +109,19 @@ class spreadsheet
 
     //returns the dependency graph 
     DependencyGraph get_dependency_graph();
+
+    //serializes the outgoing messages from the server to the client
+    string serialize_cell_update(string messageType, string cellName, string contents);
+    string serialize_cell_selected(string messageType, string cellName, int selector, string selectorName);
+    string serialize_disconnected(string messageType, int user);
+    string serialize_invalid_request(string messageType, string cellName, string message);
+    string serialize_server_shutdown(string messageType, string message);
+    //deserialize the incoming messages from the client to the server
+    tuple<string, string, string> deserialize_message(string input);
+
+    vector<string> split(string str, char delimeter);
+
+    queue<tuple<string, string, string>> get_message_queue();
 };
 
 #endif
