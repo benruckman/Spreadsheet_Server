@@ -32,7 +32,9 @@ ENV TZ="America/Salt Lake City"
 
 RUN apt-get -y update && apt-get -y install \
    g++ \
-   emacs-nox 
+   emacs-nox \
+   
+   
 
 COPY . /Server
 
