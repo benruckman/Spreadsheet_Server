@@ -195,13 +195,6 @@ int main(int argc, char* argv[])
 						std::cout << "ADDED MESSAGE TO QUEUE" << std::endl;
 						s->add_message(message);
 						pthread_mutex_unlock(&mutexsheets);
-
-						// updating and sending info out in new thread, not sure if it is the move -Jackson
-						pthread_t updatethread;
-						pthread_create(&updatethread, NULL, update_spreadsheets, NULL);
-						pthread_detach(updatethread);
-
-
 					}
 				}
 			}
@@ -317,16 +310,21 @@ void* handle_connection(void* sd)
 // updates spreadsheets
 void* update_spreadsheets(void* sd)
 {
-		pthread_mutex_lock(&mutexsheets);	
-		if(!spreads.empty())
+	while (true)
+	{
+		pthread_mutex_lock(&mutexsheets);
+		if (!spreads.empty())
 		{
-			spreadsheet* s;
-			for(auto it : spreads)
+			for (auto it : spreads)
 			{
-				it.second.process_messages();
+				string key = it.first;
+				auto value = spreads.find(key);
+				spreadsheet* s = &value->second;
+				s->process_messages();
 			}
 		}
-		pthread_mutex_unlock(&mutexsheets);	
+		pthread_mutex_unlock(&mutexsheets);
+	}
 }
 
 // exits the program printing an error message

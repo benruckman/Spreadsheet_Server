@@ -91,7 +91,7 @@ void spreadsheet::set_name(string name)
 void spreadsheet::add_message(string new_message)
 {
   pthread_mutex_lock(&mutexqueue);
-  message_queue.push(new_message);
+  this->message_queue.push(new_message);
   pthread_mutex_unlock(&mutexqueue);
   return;
 }
@@ -278,13 +278,11 @@ string spreadsheet::normalize(string cell_contents)
  */
 bool spreadsheet::process_messages()
 {
-
-   std::cout <<"Beginning size: " << message_queue.size() << std::endl;
-   pthread_mutex_lock(&mutexqueue);
+  pthread_mutex_lock(&mutexqueue);
   while(message_queue.size()> 0)
   {
     string message = message_queue.front();
-    message_queue.pop();
+    this->message_queue.pop();
     std::cout << message << std::endl;
     int n = message.length();
     // manipulate message if it is a valid request
@@ -292,13 +290,11 @@ bool spreadsheet::process_messages()
     strcpy(m, message.c_str());
     for(vector<user>::iterator it = user_list.begin(); it != user_list.end(); it++)
     {
-      std::cout << "sending message to user " << it->get_username() << std::endl;
-      // process this message, and send good one back
+        // send the message to connected users
       char* mess = "{\"messageType\" : \"cellUpdated\", \"cellName\" : \"a1\", \"contents\" : \"=1 + 3\"}\n";
       send(it->get_socket(), mess, strlen(mess), 0);
     }
   }
   pthread_mutex_unlock(&mutexqueue);
-   std::cout <<"size: " << message_queue.size() << std::endl;
   return true;
 }
