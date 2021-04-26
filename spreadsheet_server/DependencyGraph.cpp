@@ -5,7 +5,7 @@
 
 using namespace std;
 
-DependencyGraph:: DependencyGraph()
+DependencyGraph::DependencyGraph()
 {
   map<string, set<string> > dependents;
   map<string, set<string> > dependees;
