@@ -12,7 +12,11 @@
 #include <thread>
 #include <string.h>
 #include <vector>
-#include<unordered_map>
+#include <unordered_map>
+#include <iostream>
+#include <dirent.h>
+#include <sys/types.h>
+#include <signal.h>
 #include "spreadsheet.h"
 #include "user.h"
 
@@ -35,6 +39,8 @@ void* update_spreadsheets(void* sd);
 
 int error_exit(std::string err);
 
+void shut_down(int sigint);
+
 const int MAX_CLIENTS = 200;
 // array of all client clients, let us start wit
 user clients[MAX_CLIENTS];
@@ -44,10 +50,35 @@ std::unordered_map<string, spreadsheet> spreads;
 // the main entry point of our application
 int main(int argc, char* argv[])
 {
+	//Register signal
+	signal(SIGINT, shut_down);
+	
 	int master_socket; 			// our master socket, where data flows into
 	int	max_clients = 30; 		// the maximum amount of clients our server can handle
 	fd_set readfds; 			// the set of all reading sockets
-
+	
+	struct dirent * files;
+	DIR *directory = opendir("./../spreadsheet_data/");
+	
+	string full_name = "";
+	if(directory != NULL)
+	{
+		while ((files = readdir(directory)) != NULL)
+		{
+			full_name = files->d_name;
+			size_t last_index = full_name.find_last_of("."); 
+			string raw_name = full_name.substr(0, last_index);
+			
+			string extension = full_name.substr(raw_name.length());
+			
+			if(extension == ".txt")
+			{
+				spreadsheet new_sheet(raw_name);
+				spreads[raw_name] = new_sheet;
+			}
+		}
+	}
+	closedir(directory);
 
 	// a testing message
 	char* message = "{\"messageType\" : \"cellUpdated\", \"cellName\" : \"a1\", \"contents\" : \"=1 + 3\"}\n";
@@ -200,6 +231,7 @@ int main(int argc, char* argv[])
 			}
 		}
 	}
+	
 	return 0;
 }
 
@@ -278,7 +310,7 @@ void* handle_connection(void* sd)
 			// we have a spot for a new user
 			user* u = new user(i, newfd, name, ssname);
 			clients[i] = *u;
-			//pthread_mutex_lock(&mutexsheets);
+			
 			std::cout <<"Created new user " << name << std::endl;
 
 			pthread_mutex_lock(&mutexsheets);
@@ -296,6 +328,9 @@ void* handle_connection(void* sd)
 				spreadsheet* s = &it->second;
 				s->add_user(u);
 				std::cout <<"Added user " << name << " to existing spreadsheet " << ssname << " with ID " << i << std::endl;
+				
+				// TODO: Get data from spreadsheet and send it to the client
+				
 			}
 			pthread_mutex_unlock(&mutexsheets);
 			break;
@@ -331,10 +366,38 @@ void* update_spreadsheets(void* sd)
 int error_exit(std::string err)
 {
 	std::cout << err << std::endl;
+	shut_down(SIGINT);
 	return -1;
 }
 
-
+// Cleanly shusts down the server
+void shut_down(int sigint)
+{
+	// add a new user to map of sockets, and to list of spreadsheets
+	pthread_mutex_lock(&mutex);
+	for(int i = 0; i < MAX_CLIENTS; i++)
+	{
+		if(clients[i].get_id() >= 0)
+		{
+			char* message = "{\"messageType\" : \"serverError\", \"message\" : \"Server Error: Shutting down\"}\n";
+			send(clients[i].get_socket(), message, strlen(message), 0);
+		}
+	}
+	pthread_mutex_unlock(&mutex);
+	
+	
+	pthread_mutex_lock(&mutexsheets);
+	for (auto it : spreads)
+	{
+		string key = it.first;
+		auto value = spreads.find(key);
+		spreadsheet* s = &value->second;
+		s->save();
+	}
+	pthread_mutex_unlock(&mutexsheets);
+	
+	exit(sigint);
+}
 
 
 
