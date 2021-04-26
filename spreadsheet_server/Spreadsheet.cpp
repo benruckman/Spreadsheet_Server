@@ -2,7 +2,19 @@
  Definitions for the spreadsheet class
  */
 #include <iostream> // For testing purposes. TODO: remove from final version
+#include <unistd.h> 
+#include <arpa/inet.h> 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <sys/time.h> 
+#include <string>
+#include <string.h>
+#include <stdio.h>
 #include "spreadsheet.h"
+
+// used to lock critical sections of code, like the queue
+pthread_mutex_t mutexqueue = PTHREAD_MUTEX_INITIALIZER;
 
 using namespace std;
 
@@ -29,9 +41,14 @@ spreadsheet::spreadsheet(string name)
   
   vector<user> users;
   this->user_list = users;
-  
+
   // Open the spreadsheet if it exists
   open_spreadsheet(name);
+}
+
+spreadsheet::spreadsheet()
+{
+
 }
 
 
@@ -71,9 +88,12 @@ void spreadsheet::set_name(string name)
  *
  * @param new_message - the JSON string representing a new message request
  */
-void add_message(string new_message)
+void spreadsheet::add_message(string new_message)
 {
-  
+  pthread_mutex_lock(&mutexqueue);
+  message_queue.push(new_message);
+  pthread_mutex_unlock(&mutexqueue);
+  return;
 }
 
 
@@ -147,9 +167,9 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 /*
  * TODO: Document
  */
-void spreadsheet::add_user(user new_user)
+void spreadsheet::add_user(user* new_user)
 {
-  user_list.push_back(new_user);
+  user_list.push_back(*new_user);
 }
 
 
@@ -160,9 +180,10 @@ void spreadsheet::remove_user(int id)
 {
   for(vector<user>::iterator it = user_list.begin(); it != user_list.end(); it++)
   {
-    if((* it).get_id() == id)
+    if(it->get_id() == id)
     {
       user_list.erase(it);
+      break; // this fixes something, not sure why? -Jackson
     }
   }
 }
@@ -257,5 +278,27 @@ string spreadsheet::normalize(string cell_contents)
  */
 bool spreadsheet::process_messages()
 {
+
+   std::cout <<"Beginning size: " << message_queue.size() << std::endl;
+   pthread_mutex_lock(&mutexqueue);
+  while(message_queue.size()> 0)
+  {
+    string message = message_queue.front();
+    message_queue.pop();
+    std::cout << message << std::endl;
+    int n = message.length();
+    // manipulate message if it is a valid request
+    char m[n + 1];
+    strcpy(m, message.c_str());
+    for(vector<user>::iterator it = user_list.begin(); it != user_list.end(); it++)
+    {
+      std::cout << "sending message to user " << it->get_username() << std::endl;
+      // process this message, and send good one back
+      char* mess = "{\"messageType\" : \"cellUpdated\", \"cellName\" : \"a1\", \"contents\" : \"=1 + 3\"}\n";
+      send(it->get_socket(), mess, strlen(mess), 0);
+    }
+  }
+  pthread_mutex_unlock(&mutexqueue);
+   std::cout <<"size: " << message_queue.size() << std::endl;
   return true;
 }

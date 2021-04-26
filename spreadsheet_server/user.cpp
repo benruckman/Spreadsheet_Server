@@ -21,9 +21,10 @@ user::user(int id, int socket, std::string username, std::string ssname)
   this->size = 1024;
   this->socket = socket;  
   this->ssname = ssname;
-  this->buffer = new char[1024];
+  char buffer[1024];
+  this->buffer = buffer;
 }
-
+ 
 /*
  * TODO: Fill out documentation
  */
@@ -83,6 +84,6 @@ void user::clear_buffer()
 
 void user::clean()
 {
-  delete [] this->buffer;
+  //delete [] this->buffer;
 }
 

@@ -24,6 +24,7 @@ namespace SpreadsheetGUI
         /// </summary>
         public Form1(NetworkControl NetC, string filename)
         {
+
             this.NC = NetC;
 
             NC.Update += ServerUpdate;
