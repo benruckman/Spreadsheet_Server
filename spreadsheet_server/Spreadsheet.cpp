@@ -12,7 +12,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <bits/stdc++.h>
-#include <boost/algorithm/string.hpp>
+//#include <boost/algorithm/string.hpp>
 #include "spreadsheet.h"
 #include <set>
 #include <iterator>
@@ -38,11 +38,16 @@ spreadsheet::spreadsheet(string name)
   
   map<string, string> cells;
   this->non_empty_cells = cells;
-    
+  
   queue<cell> history;
   this->cell_history = history;
+<<<<<<< HEAD
     
   queue<tuple<string, string, string>> messages;
+=======
+  
+  queue<string> messages;
+>>>>>>> main
   this->message_queue = messages;
   
   vector<user> users;
@@ -235,7 +240,7 @@ void spreadsheet::save()
 {
   ofstream f;
   
-  string file_name = spreadsheet_name + ".txt";
+  string file_name = "./../spreadsheet_data/" + spreadsheet_name + ".txt";
   
   //needs to pass in a c string to open the file
   f.open(file_name.c_str());
@@ -243,6 +248,7 @@ void spreadsheet::save()
   //iterate through the nonempty cell and write them to a text file
   for(map<string, string>::iterator it = non_empty_cells.begin(); it != non_empty_cells.end(); it++)
   { 
+    cout << "Hello from save" << endl;
     //it->first is the cell name in the map, it->second is the contents of the cell in the map
     string cells = it->first + " " + it->second + "\n";
     f<<cells;
@@ -267,6 +273,7 @@ map<string, string> spreadsheet::open_spreadsheet(string file_name)
   
   while(f>>cell_name>>cell_contents)
   {
+    cout << cell_name << " " << cell_contents << endl;
     set_contents_of_cell(cell_name, cell_contents, true);
   }
   
@@ -331,7 +338,7 @@ vector<string> spreadsheet::get_variables(string contents)
   vector<string> input;
   vector<string> variables;
   //REFERENCE: geeksforgeeks.org/boostsplit-c-library/
-  boost::split(input, contents, boost::is_any_of("-|+|/|*|="));
+  //boost::split(input, contents, boost::is_any_of("-|+|/|*|="));
   for(vector<string>::iterator it = input.begin(); it != input.end(); it++)
   {
     //REFERENCE: tutorialspoint.com/c_standard_library/c_function_atoi.htm
