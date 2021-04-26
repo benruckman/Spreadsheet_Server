@@ -101,6 +101,12 @@ class spreadsheet
     //returns the value of a cell if 
     vector<string> get_variables(string contents);
 
+    // sends the entire spreadsheet to a socket
+    void send_spreadsheet(int socket);
+
+    // sends a disconnect message to all connected clients
+    void send_disconnect(int ID);
+
     //returns the dependency graph 
     DependencyGraph get_dependency_graph();
 

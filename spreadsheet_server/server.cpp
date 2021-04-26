@@ -24,27 +24,24 @@
 #define PORT 1100
 #define BUFFER_SIZE 1024
 
+// method forwarding
+void* handle_connection(void* sd);
+void* update_spreadsheets(void* sd);
+int error_exit(std::string err);
+void shut_down(int sigint);
 
 // used to lock critical sections of code, mainly clients[].
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
 // used to lock critical sections of code, spreads
 pthread_mutex_t mutexsheets = PTHREAD_MUTEX_INITIALIZER;
 
-// handles the handshake
-void* handle_connection(void* sd);
-
-// updates spreadsheets constantly
-void* update_spreadsheets(void* sd);
-
-int error_exit(std::string err);
-
-void shut_down(int sigint);
-
+// max numbe of clients our server can handle
 const int MAX_CLIENTS = 200;
+
 // array of all client clients, let us start wit
 user clients[MAX_CLIENTS];
 
+// the set of spreadsheets
 std::unordered_map<string, spreadsheet> spreads;
 
 // the main entry point of our application
@@ -52,26 +49,25 @@ int main(int argc, char* argv[])
 {
 	//Register signal
 	signal(SIGINT, shut_down);
-	
+
 	int master_socket; 			// our master socket, where data flows into
-	int	max_clients = 30; 		// the maximum amount of clients our server can handle
 	fd_set readfds; 			// the set of all reading sockets
-	
-	struct dirent * files;
-	DIR *directory = opendir("./../spreadsheet_data/");
-	
+
+	struct dirent* files;
+	DIR* directory = opendir("./../spreadsheet_data/");
+
 	string full_name = "";
-	if(directory != NULL)
+	if (directory != NULL)
 	{
 		while ((files = readdir(directory)) != NULL)
 		{
 			full_name = files->d_name;
-			size_t last_index = full_name.find_last_of("."); 
+			size_t last_index = full_name.find_last_of(".");
 			string raw_name = full_name.substr(0, last_index);
-			
+
 			string extension = full_name.substr(raw_name.length());
-			
-			if(extension == ".txt")
+
+			if (extension == ".txt")
 			{
 				spreadsheet new_sheet(raw_name);
 				spreads[raw_name] = new_sheet;
@@ -93,14 +89,14 @@ int main(int argc, char* argv[])
 	// create a master socket (i.e. the listener)
 	if ((master_socket = socket(AF_INET, SOCK_STREAM, 0)) == 0)
 		return error_exit("Error creating socket");
-	
-	int option = 1;	
+
+	int option = 1;
 	// set master socket to allow multiple connections 
 	if (setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, (char*)&option, sizeof(option)) < 0)
 		return error_exit("Error setting socket options");
 
 	// our address for our socket to bind to 
-	struct sockaddr_in address; 
+	struct sockaddr_in address;
 	address.sin_family = AF_INET;
 	address.sin_addr.s_addr = INADDR_ANY;
 	address.sin_port = htons(PORT);
@@ -138,14 +134,14 @@ int main(int argc, char* argv[])
 		int max_sd = master_socket;
 
 		// add additional sockets to set
-		for (int i = 0 ; i < MAX_CLIENTS; i++)
+		for (int i = 0; i < MAX_CLIENTS - 1; i++)
 		{
 			pthread_mutex_lock(&mutex);
 			int	sd = clients[i].get_socket();
 			pthread_mutex_unlock(&mutex);
-			if(sd > 0)
-				FD_SET( sd , &readfds);
-			if(sd > max_sd)
+			if (sd > 0)
+				FD_SET(sd, &readfds);
+			if (sd > max_sd)
 				max_sd = sd;
 		}
 
@@ -178,7 +174,7 @@ int main(int argc, char* argv[])
 			}
 
 			// else its some IO operation on some other socket
-			for (int i = 0; i < MAX_CLIENTS; i++)
+			for (int i = 0; i < MAX_CLIENTS - 1; i++)
 			{
 				// 
 				pthread_mutex_lock(&mutex);
@@ -194,26 +190,29 @@ int main(int argc, char* argv[])
 					{
 						// a client disconnected, print info
 						std::cout << "User " << cli->get_username() << " disconnected from spreadsheet " << cli->get_ssname() << std::endl;
-						
+
 						// remove the user from the spreadsheet they were on
 						pthread_mutex_lock(&mutexsheets);
 						auto it = spreads.find(cli->get_ssname());
-  						if (it == spreads.end())
+						if (it == spreads.end())
 							std::cout << "Error: removing client from nonexistant spreadsheet" << std::endl;
-  						else
+						else
 						{
 							spreadsheet* s = &it->second;
 							s->remove_user(cli->get_id());
+							s->send_disconnect(cli->get_id());
 						}
 						pthread_mutex_unlock(&mutexsheets);
-						
+
 						// close the socket they were on, and remove them from the client list
 						close(sd);
 						pthread_mutex_lock(&mutex);
 						user u;
 						clients[i] = u;
 						pthread_mutex_unlock(&mutex);
-						
+
+						//
+
 					}
 					// a message came in, print it
 					else
@@ -223,7 +222,6 @@ int main(int argc, char* argv[])
 						pthread_mutex_lock(&mutexsheets);
 						auto it = spreads.find(cli->get_ssname());
 						spreadsheet* s = &it->second;
-						std::cout << "ADDED MESSAGE TO QUEUE" << std::endl;
 						s->add_message(message);
 						pthread_mutex_unlock(&mutexsheets);
 					}
@@ -231,7 +229,7 @@ int main(int argc, char* argv[])
 			}
 		}
 	}
-	
+
 	return 0;
 }
 
@@ -257,34 +255,34 @@ void* handle_connection(void* sd)
 		pthread_exit(0);
 	}
 	std::string name = std::string(buf);
-	name.erase(name.end()-1);
+	name.erase(name.end() - 1);
 
 	// clear our buffer out
 	bzero(buf, BUFFER_SIZE);
 
 	// send the client the list of possible spreadsheets
 	pthread_mutex_lock(&mutexsheets);
-	if(spreads.empty())
+	if (spreads.empty())
 	{
 		char* message = "\n\n";
 		send(newfd, message, strlen(message), 0);
-	}	
+	}
 	else
 	{
 		std::string list;
-		for(auto it : spreads)
+		for (auto it : spreads)
 		{
 			list.append(it.first);
 			list.append("\n");
 		}
 		list.append("\n");
 		int n = list.length();
-    	char files[n + 1];
-    	strcpy(files, list.c_str());
+		char files[n + 1];
+		strcpy(files, list.c_str());
 		send(newfd, files, strlen(files), 0);
 	}
 	pthread_mutex_unlock(&mutexsheets);
-	
+
 
 	// read the name of the spreadsheet the client wishes to edit
 	nbytes = read(newfd, buf, BUFFER_SIZE);
@@ -299,38 +297,39 @@ void* handle_connection(void* sd)
 		pthread_exit(0);
 	}
 	std::string ssname = std::string(buf);
-	ssname.erase(ssname.end()-1);
+	ssname.erase(ssname.end() - 1);
 
 	// add a new user to map of sockets, and to list of spreadsheets
 	pthread_mutex_lock(&mutex);
-	for(int i = 0; i < MAX_CLIENTS; i++)
+	for (int i = 0; i < MAX_CLIENTS - 1; i++)
 	{
-		if(clients[i].get_id() < 0)
+		if (clients[i].get_id() < 0)
 		{
 			// we have a spot for a new user
 			user* u = new user(i, newfd, name, ssname);
 			clients[i] = *u;
-			
-			std::cout <<"Created new user " << name << std::endl;
+
+			std::cout << "Created new user " << name << std::endl;
 
 			pthread_mutex_lock(&mutexsheets);
 			// if we do not already have the spreadsheet, make a new one
 			auto it = spreads.find(ssname);
-  			if (it == spreads.end())
+			if (it == spreads.end())
 			{
 				spreadsheet s(ssname);
 				s.add_user(u);
 				spreads[ssname] = s;
-				std::cout <<"Added user " << name << " to new spreadsheet " << ssname << " with ID " << i << std::endl;
+				std::cout << "Added user " << name << " to new spreadsheet " << ssname << " with ID " << i << std::endl;
 			}
-  			else
+			else
 			{
 				spreadsheet* s = &it->second;
 				s->add_user(u);
-				std::cout <<"Added user " << name << " to existing spreadsheet " << ssname << " with ID " << i << std::endl;
-				
+				std::cout << "Added user " << name << " to existing spreadsheet " << ssname << " with ID " << i << std::endl;
+
+				s->send_spreadsheet(u->get_socket());
 				// TODO: Get data from spreadsheet and send it to the client
-				
+
 			}
 			pthread_mutex_unlock(&mutexsheets);
 			break;
@@ -373,19 +372,21 @@ int error_exit(std::string err)
 // Cleanly shusts down the server
 void shut_down(int sigint)
 {
+	std::cout << "SHUTTING DOWN" << std::endl;
 	// add a new user to map of sockets, and to list of spreadsheets
 	pthread_mutex_lock(&mutex);
-	for(int i = 0; i < MAX_CLIENTS; i++)
+	for (int i = 0; i < MAX_CLIENTS - 1; i++)
 	{
-		if(clients[i].get_id() >= 0)
+		if (clients[i].get_id() != -1)
 		{
+			std::cout << clients[i].get_username() << " : " << clients[i].get_id() << std::endl;
 			char* message = "{\"messageType\" : \"serverError\", \"message\" : \"Server Error: Shutting down\"}\n";
 			send(clients[i].get_socket(), message, strlen(message), 0);
 		}
 	}
 	pthread_mutex_unlock(&mutex);
-	
-	
+
+
 	pthread_mutex_lock(&mutexsheets);
 	for (auto it : spreads)
 	{
@@ -395,7 +396,7 @@ void shut_down(int sigint)
 		s->save();
 	}
 	pthread_mutex_unlock(&mutexsheets);
-	
+
 	exit(sigint);
 }
 
