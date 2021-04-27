@@ -30,7 +30,7 @@ struct message
 	string type{};
 	string name{};
 	string contents{};
-	user sender{};
+	user* sender{};
 };
 
 
@@ -106,11 +106,15 @@ void spreadsheet::set_name(string name)
  *
  * @param new_message - the JSON string representing a new message request
  */
-void spreadsheet::add_message(string new_message, user sender)
+void spreadsheet::add_message(string new_message, int ID)
 {
   pthread_mutex_lock(&mutexqueue);
   message m = deserialize_message(new_message);
-  m.sender = sender;
+  for (vector<user>::iterator it = user_list.begin(); it != user_list.end(); it++)
+  {
+	  if (it->get_id() == ID)
+		  m.sender = &(*it);
+  }
   message_queue.push(m);
   pthread_mutex_unlock(&mutexqueue);
   return;
@@ -283,9 +287,7 @@ map<string, string> spreadsheet::open_spreadsheet(string file_name)
 		size_t last_index = line.find_first_of(" ");
 		cell_name = line.substr(0, last_index);
 		cell_contents = line.substr(cell_name.length() + 1);
-		cout << cell_name << " " << cell_contents << endl;
 		set_contents_of_cell(cell_name, cell_contents, true);
-		cout << non_empty_cells.size() << std::endl;
 	}
 	return non_empty_cells;
 }
@@ -322,13 +324,15 @@ bool spreadsheet::process_messages()
 		if (m.type == "editCell")
 		{
 			message = serialize_cell_update("cellUpdated", m.name, m.contents);
-			std::cout << message << std::endl;
 		}
 		else if (m.type == "selectCell")
 		{
-			message = serialize_cell_selected("cellSelected", m.name, m.sender.get_id(), m.sender.get_username());
-			std::cout << message << std::endl;
+			message = serialize_cell_selected("cellSelected", m.name, m.sender->get_id(), m.sender->get_username());
+			m.sender->set_current(m.name);
+			std::cout << "Sender: " << m.sender << std::endl;
+			std::cout << "senders current: "<< m.sender->get_current() << std::endl;
 		}
+		//TODO: add additional checks
 		int n = message.length();
 		char mess[n + 1];
 		strcpy(mess, message.c_str());
@@ -374,8 +378,10 @@ DependencyGraph spreadsheet::get_dependency_graph()
 // sends the entire spreadsheet to a socket
 void spreadsheet::send_spreadsheet(int socket)
 {
+	std::cout << "Sending initial spreadsheet: " << std::endl;
 	for (map<string, string>::iterator it = non_empty_cells.begin(); it != non_empty_cells.end(); it++)
 	{
+		std::cout << "Sending initial cell: " << it->first << std::endl;
 		std::string s = serialize_cell_update("cellUpdate", it->first, it->second);
 		int n = s.length();
 		char message[n + 1];
@@ -395,6 +401,21 @@ void spreadsheet::send_disconnect(int ID)
 	{
 		std::cout << "DISCONNECTED: " << message << std::endl;
 		send(it->get_socket(), message, strlen(message), 0);
+	}
+}
+
+void spreadsheet::send_selections(int socket)
+{
+	std::cout << "Sending initial selections: " << std::endl;
+	for (vector<user>::iterator it = user_list.begin(); it != user_list.end(); it++)
+	{
+		std::cout << "Sending initial selection: " << it->get_current() << std::endl;
+		std::string s = serialize_cell_selected("cellSelected", it->get_current(), it->get_id(), it->get_username());
+		int n = s.length();
+		char message[n + 1];
+		strcpy(message, s.c_str());
+		std::cout << message << std::endl;
+		send(socket, message, strlen(message), 0);
 	}
 }
 

@@ -31,7 +31,7 @@ class spreadsheet
       string type{};
       string name{};
       string contents{};
-      user sender{};
+      user* sender{};
   };
   
   private : 
@@ -65,7 +65,7 @@ class spreadsheet
     ~spreadsheet();
     
     // Adds a message to the message queue
-    void add_message(string new_message, user sender);
+    void add_message(string new_message, int id);
     
     // Sets the name of the spreadsheet
     void set_name(string name);
@@ -114,6 +114,9 @@ class spreadsheet
 
     // sends a disconnect message to all connected clients
     void send_disconnect(int ID);
+
+    // sends the current selections
+    void send_selections(int ID);
 
     //returns the dependency graph 
     DependencyGraph get_dependency_graph();
