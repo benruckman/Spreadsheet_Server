@@ -78,7 +78,7 @@ namespace SpreadsheetGUI
 
             if(message.type.Equals("disconnected"))
             {
-                // remove disconnected user from our list
+                spreadsheetPanel1.ChangeUserSelection(-1, -1, message.selectorID); // this doesn't quite work
             }
 
             if (message.type.Equals("serverError"))

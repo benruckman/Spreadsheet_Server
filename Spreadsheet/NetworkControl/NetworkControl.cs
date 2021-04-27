@@ -195,9 +195,16 @@ namespace SS
                 }
                 catch(Newtonsoft.Json.JsonSerializationException)
                 {
-                    Error("Invalid Message from server");
+                    char[] h = {'\n'};
+                    if(Int32.TryParse(p.TrimEnd(h), out int id))
+                    {
+                        // we have recieved our user ID. 
+                    }
+                    else
+                    {
+                        Error("Invalid Message from server");
+                    }
                 }
-               
                 // remove the data we just processed from the state's buffer
                 state.RemoveData(0, p.Length);
             }

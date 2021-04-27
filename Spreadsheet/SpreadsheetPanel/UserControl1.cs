@@ -417,6 +417,8 @@ namespace SS
                 {
                     if (otherUsers.ContainsKey(userName))
                         otherUsers.Remove(userName);
+                    if (col == -1 && row == -1)
+                        otherUsers.Remove(userName);
                     otherUsers.Add(userName, new Address(col, row));
                 }
                 Invalidate();

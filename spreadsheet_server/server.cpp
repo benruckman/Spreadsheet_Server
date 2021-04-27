@@ -222,7 +222,7 @@ int main(int argc, char* argv[])
 						pthread_mutex_lock(&mutexsheets);
 						auto it = spreads.find(cli->get_ssname());
 						spreadsheet* s = &it->second;
-						s->add_message(message, *cli);
+						s->add_message(message, cli->get_id());
 						pthread_mutex_unlock(&mutexsheets);
 					}
 				}
@@ -327,6 +327,7 @@ void* handle_connection(void* sd)
 				std::cout << "Added user " << name << " to existing spreadsheet " << ssname << " with ID " << i << std::endl;
 				// send user state of spreadsheet
 				s->send_spreadsheet(u->get_socket());
+				s->send_selections(u->get_socket());
 				s->add_user(u);
 				// send user their ID
 				/*std::string user = std::to_string(selector) + "\n";

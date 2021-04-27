@@ -23,6 +23,7 @@ user::user(int id, int socket, std::string username, std::string ssname)
   this->ssname = ssname;
   char buffer[1024];
   this->buffer = buffer;
+  this->currcell = "A1";
 }
  
 /*
@@ -30,7 +31,7 @@ user::user(int id, int socket, std::string username, std::string ssname)
  */
 user::~user()
 {
-  clean();
+
 }
 /*
  * TODO: Fill out documentation
@@ -39,6 +40,16 @@ user::~user()
 std::string user::get_ssname()
 {
   return this->ssname;
+}
+
+std::string user::get_current()
+{
+	return this->currcell;
+}
+
+void user::set_current(std::string curr)
+{
+	this->currcell = curr;
 }
 
 
@@ -82,8 +93,4 @@ void user::clear_buffer()
   bzero(this->buffer, 1024);
 }
 
-void user::clean()
-{
-  //delete [] this->buffer;
-}
 
