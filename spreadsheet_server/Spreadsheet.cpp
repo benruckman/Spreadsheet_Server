@@ -12,13 +12,14 @@
 #include <string.h>
 #include <stdio.h>
 #include <bits/stdc++.h>
- //#include <boost/algorithm/string.hpp>
-#include "spreadsheet.h"
+#include "Spreadsheet.h"
 #include <set>
 #include <iterator>
 #include <algorithm>
 #include <regex>
 #include <tuple>
+#include <map>
+
 // used to lock critical sections of code, like the queue
 pthread_mutex_t mutexqueue = PTHREAD_MUTEX_INITIALIZER;
 
@@ -39,9 +40,12 @@ spreadsheet::spreadsheet(string name)
   
   map<string, string> cells;
   this->non_empty_cells = cells;
+
+  map<string, queue<string>> cellHistory;
+  this->cell_history = cellHistory;
   
   queue<cell> history;
-  this->cell_history = history;
+  this->spreadsheet_history = history;
 
     
   queue<tuple<string, string, string>> messages;
@@ -51,7 +55,7 @@ spreadsheet::spreadsheet(string name)
   this->user_list = users;
 
   // Open the spreadsheet if it exists
-  open_spreadsheet(name);
+  // open_spreadsheet(name);
 }
 
 
@@ -105,6 +109,13 @@ void spreadsheet::add_message(string new_message)
   return;
 }
 
+/*
+ *TODO: DOCUMENT
+ */
+map<string, string> spreadsheet::get_non_empty_cells()
+{
+  return non_empty_cells;
+}
 
 /*
  * Reurns the contents of the named cell.
@@ -115,7 +126,7 @@ void spreadsheet::add_message(string new_message)
 string spreadsheet::get_cell_contents(string name)
 {
 	//googled stackoverflow for how to iterate through a map
-	for (map<string, string>::iterator it = non_empty_cells.begin(); it != non_empty_cells.end(); it++)
+  for (map<string, string>::iterator it = get_non_empty_cells().begin(); it != get_non_empty_cells().end(); it++)
 	{
 		//it->first is the key of the map
 		if (it->first == name)
@@ -133,7 +144,7 @@ vector<string> spreadsheet::get_names_of_all_non_empty_cells()
 	vector<string> cells;
 
 	//this is the way to iterate through a map
-	for (map<string, string>::iterator it = non_empty_cells.begin(); it != non_empty_cells.end(); it++)
+	for (map<string, string>::iterator it = get_non_empty_cells().begin(); it != get_non_empty_cells().end(); it++)
 	{
 		cells.push_back(it->first);
 	}
@@ -145,44 +156,62 @@ vector<string> spreadsheet::get_names_of_all_non_empty_cells()
 /*
  * TODO: Document
  */
-bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
+bool spreadsheet::set_contents_of_cell(string name, string content)
 {
   //used to keep the previous contents of a cell
-  string previous_contents = "";
-  if(undo == false && non_empty_cells.size() != 0)
-  {
-    for(map<string, string>::iterator it = non_empty_cells.begin(); it != non_empty_cells.end(); it++)
+    string previous_contents = "";
+
+    if(get_non_empty_cells().size() != 0)
     {
+    map<string, string>::iterator it = get_non_empty_cells().begin();
+    while(it != get_non_empty_cells().end())
+    {
+      std::cout<<"Inside the iterator while loop"<<std::endl;
       //if the key in the map is equal to name of the cell
       if(it->first == name)
       {
-	      //it->second is the value associated with the key
-	      previous_contents = it->second;
-	      set<string> newDependents;
-	      get_dependency_graph().replaceDependents(name, newDependents);
+	 //it->second is the value associated with the key
+	 previous_contents = it->second;
+	 
+	 if(content[0] == '=')
+         {
+            vector<string> var = get_variables(content);
+	    set<string> newDependents;
+            for(int i = 0; i < var.size(); i++)
+            {
+	      newDependents.insert(var[i]);
+	    }
+	    get_dependency_graph().replaceDependents(name, newDependents);
+           
+	 }
+	 non_empty_cells[name] = content;
+	 cell_history[name].push(previous_contents);
+	 cell previousCell;
+         previousCell.cell_name = name;
+         previousCell.cell_contents = previous_contents;
+         spreadsheet_history.push(previousCell);
+	 return true;
       }
+      it++;
     }
-    non_empty_cells[name] = content;
-    //needs to check if the content is a formula, if it is, then we would need a way to return variable in the formula
-    //then check for circular dependencies and replace dependents and add dependencies
-    /* 
-    if(content[0] == "=")
-    {
-      vector<string> var = get_variables(content);
-      set<string> dependents;
-      for(int i = 0; i < var.size(); i++)
-      {
-	dependents.insert(name, var[i]);
-      }
-      get_dependency_graph().addDependents(name, dependents);
-      cell previousCell;
-      previousCell.name = name;
-      previousCell.content = previous_contents;
-      cell_history.push();
-      set_contents_of_cell(name, previous_contents, true);
-    */
+   }
+    std::cout<<"Got out of the for loop"<<std::endl;
+     if(content[0] == '=')
+     {
+       std::cout<<"Inside content[0] == '=' if statement"<<std::endl;
+       vector<string> var = get_variables(content);
+       for(int i = 0; i < var.size(); i++)
+       {
+	 get_dependency_graph().addDependency(name, var[i]);
+       }
+    }
+     std::cout<<"Got of of content[0] if statement"<<std::endl;
+       non_empty_cells.insert(std::pair<string, string>(name, content));
+       cell previousCell;
+       previousCell.cell_name = name;
+       previousCell.cell_contents = previous_contents;
+       get_spreadsheet_history().push(previousCell);
       return true;
-    }
 }
 
 
@@ -210,25 +239,58 @@ void spreadsheet::remove_user(int id)
 	}
 }
 
+queue<spreadsheet::cell> spreadsheet::get_spreadsheet_history()
+{
+  return this->spreadsheet_history;
+}
+
+ map<string,queue<string>> spreadsheet::get_cell_history()
+{
+  return this->cell_history;
+}
+
 
 /*
  * TODO: Document
  */
-string spreadsheet::undo_spreadsheet()
+string spreadsheet::revert_cell(string selectedCell)
 {
-	cell previous_cell = cell_history.front();
-
-	cell_history.pop();
-
-	string cell_name = previous_cell.cell_name;
-	string cell_content = previous_cell.cell_contents;
-
-	set_contents_of_cell(cell_name, cell_content, true);
-
-	string new_change = cell_name + " : " + cell_content;
-
-	return new_change;
+         
+       queue<string> cellHistory = cell_history[selectedCell];
+       std::cout<<cellHistory.front()<<std::endl;
+       string latestContent = get_cell_contents(selectedCell);
+       std::cout<<latestContent<<std::endl;
+       /*
+       if(!set_contents_of_cell(selectedCell, latestContent))
+	{
+	  //return dependency error
+	}
+       */
+       cell latestCell;
+       latestCell.cell_name = selectedCell;
+       latestCell.cell_contents = latestContent;
+       spreadsheet_history.push(latestCell);
+       std::cout<<spreadsheet_history.front().cell_name<<std::endl;
+       std::cout<<spreadsheet_history.front().cell_contents<<std::endl;
+       string new_change = selectedCell + " " + cellHistory.front();
+       std::cout<<cellHistory.front()<<std::endl;
+       non_empty_cells.erase(selectedCell);
+       non_empty_cells[selectedCell] = cellHistory.front();
+       cell_history[selectedCell].pop();
+       return new_change;
 }
+
+ string spreadsheet::undo()
+{
+  spreadsheet_history.pop();
+  cell latestChange = spreadsheet_history.front();
+  std::cout<<latestChange.cell_name<<std::endl;
+  std::cout<<latestChange.cell_contents<<std::endl;
+  set_contents_of_cell(latestChange.cell_name, latestChange.cell_contents);
+  string new_change = latestChange.cell_name + " " + latestChange.cell_contents;
+  return new_change;
+}
+
 
 
 /*
@@ -238,8 +300,8 @@ void spreadsheet::save()
 {
 	ofstream f;
 
-	string file_name = "./../spreadsheet_data/" + spreadsheet_name + ".txt";
-
+	//string file_name = "../../spreadsheet_data/" + spreadsheet_name + ".txt";
+	string file_name = spreadsheet_name + ".txt";
 	//needs to pass in a c string to open the file
 	f.open(file_name.c_str());
 
@@ -273,7 +335,7 @@ map<string, string> spreadsheet::open_spreadsheet(string file_name)
 		cell_name = line.substr(0, last_index);
 		cell_contents = line.substr(cell_name.length() + 1);
 		cout << cell_name << " " << cell_contents << endl;
-		set_contents_of_cell(cell_name, cell_contents, true);
+		set_contents_of_cell(cell_name, cell_contents);
 		cout << non_empty_cells.size() << std::endl;
 	}
 	return non_empty_cells;
@@ -299,13 +361,14 @@ string spreadsheet::normalize(string cell_contents)
 /*
  * TODO: Document
  */
+
 bool spreadsheet::process_messages()
 {
-
+  /*
 	pthread_mutex_lock(&mutexqueue);
 	while (message_queue.size() > 0)
 	{
-		string message = message_queue.front();
+		string message = message_queue.front()[0];
 		this->message_queue.pop();
 		std::cout << message << std::endl;
 		int n = message.length();
@@ -319,8 +382,10 @@ bool spreadsheet::process_messages()
 		}
 	}
 	pthread_mutex_unlock(&mutexqueue);
+  */
 	return true;
 }
+
 /*
  *TODO: Document
  */
@@ -328,14 +393,23 @@ vector<string> spreadsheet::get_variables(string contents)
 {
 	vector<string> input;
 	vector<string> variables;
-	//REFERENCE: geeksforgeeks.org/boostsplit-c-library/
-	//boost::split(input, contents, boost::is_any_of("-|+|/|*|="));
+	string inputString = contents;
+	char delimeters[5] = {'-', '+', '*', '/', '='};
+	for(int i = 0; i < 5; i++)
+	{
+	  input = split(inputString, delimeters[i]);
+	  inputString = "";
+	  for(int j = 0; j < input.size(); j++)
+	  {
+	    inputString += input[j];
+	  }
+	}
 	for (vector<string>::iterator it = input.begin(); it != input.end(); it++)
 	{
 		//REFERENCE: tutorialspoint.com/c_standard_library/c_function_atoi.htm
 		//atoi returns 0 if the string is not converted to an integer, thus it is a variable
 		int val = atoi((*it).c_str());
-		if (val == 0)
+		if (val == 0 && ((*it).c_str() != "0"))
 		{
 			variables.push_back(*it);
 		}
