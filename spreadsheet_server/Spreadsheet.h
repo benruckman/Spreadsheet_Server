@@ -44,8 +44,10 @@ class spreadsheet
     
     // DependencyGraph g; *needs to create a dependencygraph class so that when cells are getting changed, all other cells that depend on it could be changed
     // Keeps track of all the changes that has been made to the cell
-    queue<cell> cell_history;
+    queue<cell> spreadsheet_history;
     
+    map<string, queue<string>> cell_history;    
+
     // Keeps track of all request messages that clients send to the server
     queue<message> message_queue;
     
@@ -53,7 +55,7 @@ class spreadsheet
     vector<user> user_list;
     //dependency graph to keep track of cells that a certain cell depend on
     DependencyGraph g;
-    
+
   public :
   
     // Constructor for Spreadsheet class
@@ -64,12 +66,16 @@ class spreadsheet
     // destructor
     ~spreadsheet();
     
-    // Adds a message to the message queue
+    map<string, queue<string>> get_cell_history();
+
+    queue<cell> get_spreadsheet_history();
+  
     void add_message(string new_message, int id);
     
     // Sets the name of the spreadsheet
     void set_name(string name);
     
+
     // Returns the name of the spreadsheet
     string get_name();
     
@@ -83,11 +89,13 @@ class spreadsheet
     vector<string> get_names_of_all_non_empty_cells();
     
     // Passing in a bool called undo to check what the contents of the cell be set to
-    bool set_contents_of_cell(string name, string content, bool undo);
+    bool set_contents_of_cell(string name, string content);
     
     // This method will undo the change made to the spreadsheet
-    string undo_spreadsheet();
+    string revert_cell(string selectedCell);
     
+    string undo();
+
     // Adds a user to the spreadsheet
     void add_user(user* new_user);
     
@@ -132,7 +140,9 @@ class spreadsheet
 
     vector<string> split(string str, char delimeter);
 
+    queue<message> get_message_queue();
 
+    map<string, string> get_non_empty_cells();
 };
 
 #endif
