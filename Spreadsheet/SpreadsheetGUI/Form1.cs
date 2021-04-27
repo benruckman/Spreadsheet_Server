@@ -24,6 +24,7 @@ namespace SpreadsheetGUI
         /// </summary>
         public Form1(NetworkControl NetC, string filename)
         {
+
             this.NC = NetC;
 
             NC.Update += ServerUpdate;
@@ -49,6 +50,10 @@ namespace SpreadsheetGUI
             Text = filename;
         }
 
+        /// <summary>
+        /// Process JSon coming from the server, and update the spreadsheet
+        /// </summary>
+        /// <param name="message"></param>
         private void ServerUpdate(SS.MessageType message)
         {
             if (message.type.Equals("cellUpdated"))
@@ -65,7 +70,6 @@ namespace SpreadsheetGUI
                 int row = spreadsheetPanel1.GetCellNameRow(message.cellName);
                 spreadsheetPanel1.ChangeUserSelection(col, row, message.selectorID); 
             }
-
 
             if (message.type.Equals("requestError"))
             {
@@ -234,6 +238,11 @@ namespace SpreadsheetGUI
             }
         }
 
+        /// <summary>
+        /// Sends an undo request to the server, after undo button is clicked. 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void UndoButton_Click(object sender, EventArgs e)
         {
             // Sending undo request to server via JSon
@@ -242,6 +251,11 @@ namespace SpreadsheetGUI
             NC.SendData(request);
         }
 
+        /// <summary>
+        /// Sends an revert request to the server, after revert button is clicked. 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void RevertButton_Click(object sender, EventArgs e)
         {
             // Sending revert request to server via JSon

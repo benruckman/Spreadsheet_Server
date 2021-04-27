@@ -400,7 +400,7 @@ namespace SS
             public Color fontColor;
             public Color RowLabelColor;
             public Color ColLabelColor;
-            
+
             // Represent other users, and where they are selecting cells
             private Dictionary<int, Address> otherUsers;
 
@@ -418,9 +418,14 @@ namespace SS
 
             public bool ChangeUserSelection(int col, int row, int userName)
             {
-                if (otherUsers.ContainsKey(userName))
-                    otherUsers.Remove(userName);
-                otherUsers.Add(userName, new Address(col, row));
+                lock (_values)
+                {
+                    if (otherUsers.ContainsKey(userName))
+                        otherUsers.Remove(userName);
+                    if (col == -1 && row == -1)
+                        otherUsers.Remove(userName);
+                    otherUsers.Add(userName, new Address(col, row));
+                }
                 Invalidate();
                 return true;
             }
@@ -442,7 +447,8 @@ namespace SS
 
             public void Clear()
             {
-                _values.Clear();
+                lock (_values)
+                    _values.Clear();
                 Invalidate();
             }
 
@@ -455,13 +461,16 @@ namespace SS
                 }
 
                 Address a = new Address(col, row);
-                if (c == null || c == "")
+                lock (_values)
                 {
-                    _values.Remove(a);
-                }
-                else
-                {
-                    _values[a] = c;
+                    if (c == null || c == "")
+                    {
+                        _values.Remove(a);
+                    }
+                    else
+                    {
+                        _values[a] = c;
+                    }
                 }
                 Invalidate();
                 return true;
@@ -485,12 +494,15 @@ namespace SS
 
             public bool SetSelection(int col, int row)
             {
-                if (InvalidAddress(col, row))
+                lock (_values)
                 {
-                    return false;
+                    if (InvalidAddress(col, row))
+                    {
+                        return false;
+                    }
+                    _selectedCol = col;
+                    _selectedRow = row;
                 }
-                _selectedCol = col;
-                _selectedRow = row;
                 Invalidate();
                 return true;
             }
@@ -517,60 +529,61 @@ namespace SS
 
             protected override void OnPaint(PaintEventArgs e)
             {
-
-                // Clip based on what needs to be refreshed.
-                Region clip = new Region(e.ClipRectangle);
-                e.Graphics.Clip = clip;
-
-                // Color the background of the data area white
-                e.Graphics.FillRectangle(
-                    new SolidBrush(dataBackground),
-                    LABEL_COL_WIDTH,
-                    LABEL_ROW_HEIGHT,
-                    (COL_COUNT - _firstColumn) * DATA_COL_WIDTH,
-                    (ROW_COUNT - _firstRow) * DATA_ROW_HEIGHT);
-
-                // Pen, brush, and fonts to use
-                Brush brush = new SolidBrush(fontColor);
-                Pen pen = new Pen(brush);
-                Font regularFont = Font;
-                Font boldFont = new Font(regularFont, FontStyle.Bold);
-
-                // Draw the column lines
-                int bottom = LABEL_ROW_HEIGHT + (ROW_COUNT - _firstRow) * DATA_ROW_HEIGHT;
-                e.Graphics.DrawLine(pen, new Point(0, 0), new Point(0, bottom));
-                for (int x = 0; x <= (COL_COUNT - _firstColumn); x++)
+                lock (_values)
                 {
-                    e.Graphics.DrawLine(
-                        pen,
-                        new Point(LABEL_COL_WIDTH + x * DATA_COL_WIDTH, 0),
-                        new Point(LABEL_COL_WIDTH + x * DATA_COL_WIDTH, bottom));
-                }
+                    // Clip based on what needs to be refreshed.
+                    Region clip = new Region(e.ClipRectangle);
+                    e.Graphics.Clip = clip;
 
-                // Draw the column labels
-                for (int x = 0; x < COL_COUNT - _firstColumn; x++)
-                {
-                    Font f = (_selectedCol - _firstColumn == x) ? boldFont : Font;
-                    DrawColumnLabel(e.Graphics, x, f);
-                }
+                    // Color the background of the data area white
+                    e.Graphics.FillRectangle(
+                        new SolidBrush(dataBackground),
+                        LABEL_COL_WIDTH,
+                        LABEL_ROW_HEIGHT,
+                        (COL_COUNT - _firstColumn) * DATA_COL_WIDTH,
+                        (ROW_COUNT - _firstRow) * DATA_ROW_HEIGHT);
 
-                // Draw the row lines
-                int right = LABEL_COL_WIDTH + (COL_COUNT - _firstColumn) * DATA_COL_WIDTH;
-                e.Graphics.DrawLine(pen, new Point(0, 0), new Point(right, 0));
-                for (int y = 0; y <= ROW_COUNT - _firstRow; y++)
-                {
-                    e.Graphics.DrawLine(
-                        pen,
-                        new Point(0, LABEL_ROW_HEIGHT + y * DATA_ROW_HEIGHT),
-                        new Point(right, LABEL_ROW_HEIGHT + y * DATA_ROW_HEIGHT));
-                }
+                    // Pen, brush, and fonts to use
+                    Brush brush = new SolidBrush(fontColor);
+                    Pen pen = new Pen(brush);
+                    Font regularFont = Font;
+                    Font boldFont = new Font(regularFont, FontStyle.Bold);
 
-                // Draw the row labels
-                for (int y = 0; y < (ROW_COUNT - _firstRow); y++)
-                {
-                    Font f = (_selectedRow - _firstRow == y) ? boldFont : Font;
-                    DrawRowLabel(e.Graphics, y, f);
-                }
+                    // Draw the column lines
+                    int bottom = LABEL_ROW_HEIGHT + (ROW_COUNT - _firstRow) * DATA_ROW_HEIGHT;
+                    e.Graphics.DrawLine(pen, new Point(0, 0), new Point(0, bottom));
+                    for (int x = 0; x <= (COL_COUNT - _firstColumn); x++)
+                    {
+                        e.Graphics.DrawLine(
+                            pen,
+                            new Point(LABEL_COL_WIDTH + x * DATA_COL_WIDTH, 0),
+                            new Point(LABEL_COL_WIDTH + x * DATA_COL_WIDTH, bottom));
+                    }
+
+                    // Draw the column labels
+                    for (int x = 0; x < COL_COUNT - _firstColumn; x++)
+                    {
+                        Font f = (_selectedCol - _firstColumn == x) ? boldFont : Font;
+                        DrawColumnLabel(e.Graphics, x, f);
+                    }
+
+                    // Draw the row lines
+                    int right = LABEL_COL_WIDTH + (COL_COUNT - _firstColumn) * DATA_COL_WIDTH;
+                    e.Graphics.DrawLine(pen, new Point(0, 0), new Point(right, 0));
+                    for (int y = 0; y <= ROW_COUNT - _firstRow; y++)
+                    {
+                        e.Graphics.DrawLine(
+                            pen,
+                            new Point(0, LABEL_ROW_HEIGHT + y * DATA_ROW_HEIGHT),
+                            new Point(right, LABEL_ROW_HEIGHT + y * DATA_ROW_HEIGHT));
+                    }
+
+                    // Draw the row labels
+                    for (int y = 0; y < (ROW_COUNT - _firstRow); y++)
+                    {
+                        Font f = (_selectedRow - _firstRow == y) ? boldFont : Font;
+                        DrawRowLabel(e.Graphics, y, f);
+                    }
 
                 /*
                 // Highlight the selection, if it is visible
@@ -602,29 +615,30 @@ namespace SS
                     }
                 }
 
-                // Draw the text
-                foreach (KeyValuePair<Address, String> address in _values)
-                {
-                    String text = address.Value;
-                    int x = address.Key.Col - _firstColumn;
-                    int y = address.Key.Row - _firstRow;
-                    float height = e.Graphics.MeasureString(text, regularFont).Height;
-                    float width = e.Graphics.MeasureString(text, regularFont).Width;
-
-                    if (x >= 0 && y >= 0)
+                    // Draw the text
+                    foreach (KeyValuePair<Address, String> address in _values)
                     {
-                        Region cellClip = new Region(new Rectangle(LABEL_COL_WIDTH + x * DATA_COL_WIDTH + PADDING,
-                                                                   LABEL_ROW_HEIGHT + y * DATA_ROW_HEIGHT,
-                                                                   DATA_COL_WIDTH - 2 * PADDING,
-                                                                   DATA_ROW_HEIGHT));
-                        cellClip.Intersect(clip);
-                        e.Graphics.Clip = cellClip;
-                        e.Graphics.DrawString(
-                            text,
-                            regularFont,
-                            brush,
-                            LABEL_COL_WIDTH + x * DATA_COL_WIDTH + PADDING,
-                            LABEL_ROW_HEIGHT + y * DATA_ROW_HEIGHT + (DATA_ROW_HEIGHT - height) / 2);
+                        String text = address.Value;
+                        int x = address.Key.Col - _firstColumn;
+                        int y = address.Key.Row - _firstRow;
+                        float height = e.Graphics.MeasureString(text, regularFont).Height;
+                        float width = e.Graphics.MeasureString(text, regularFont).Width;
+
+                        if (x >= 0 && y >= 0)
+                        {
+                            Region cellClip = new Region(new Rectangle(LABEL_COL_WIDTH + x * DATA_COL_WIDTH + PADDING,
+                                                                       LABEL_ROW_HEIGHT + y * DATA_ROW_HEIGHT,
+                                                                       DATA_COL_WIDTH - 2 * PADDING,
+                                                                       DATA_ROW_HEIGHT));
+                            cellClip.Intersect(clip);
+                            e.Graphics.Clip = cellClip;
+                            e.Graphics.DrawString(
+                                text,
+                                regularFont,
+                                brush,
+                                LABEL_COL_WIDTH + x * DATA_COL_WIDTH + PADDING,
+                                LABEL_ROW_HEIGHT + y * DATA_ROW_HEIGHT + (DATA_ROW_HEIGHT - height) / 2);
+                        }
                     }
                 }
             }
