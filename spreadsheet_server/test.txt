@@ -1,13 +1,3 @@
 A2 Hello
 A8 Hello
-B11 asfdsa
 B8 Hello
-C5 asfd
-D7 adf
-E10 adsf
-E5 ad
-E8 fhdb
-F5 fa
-F7 dfa
-G10 gdsaf
-H5 adsf

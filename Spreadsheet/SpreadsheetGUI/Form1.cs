@@ -80,7 +80,7 @@ namespace SpreadsheetGUI
             {
                 //int col = spreadsheetPanel1.GetCellNameCol(message.cellName);
                 //int row = spreadsheetPanel1.GetCellNameRow(message.cellName);
-                spreadsheetPanel1.RemoveUserSelection(message.selectorID);
+                spreadsheetPanel1.RemoveUserSelection(message.userID);
             }
 
             if (message.type.Equals("serverError"))
