@@ -179,7 +179,7 @@ def testCellSelect(s1, s2, cellName):
     # return true if everything processes as expected, return false if error occurs.
     data = receiveData(s2, "}", 1, 60)
     if (data is False):
-        return False;
+        return False
 
     return "messageType: \"selected\", cellName: \"" + cellName + "\", selector: " + s1.ID + ", selectorName: \"" + s1.name + "\"" in data
 
