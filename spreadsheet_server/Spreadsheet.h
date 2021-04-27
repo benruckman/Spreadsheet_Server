@@ -92,6 +92,9 @@ class spreadsheet
     // Passing in a bool called undo to check what the contents of the cell be set to
     bool set_contents_of_cell(string name, string content, bool undo);
     
+    // Helper method that checks whether the variables belonging to a formula in name will cause a circular dependency.
+    bool creates_circular_dependency(const string name, const vector<string> &vars);
+    
     // This method will undo the change made to the spreadsheet
     string revert_cell(string selectedCell);
     
