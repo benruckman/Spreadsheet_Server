@@ -12,7 +12,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <bits/stdc++.h>
-#include "Spreadsheet.h"
+#include "spreadsheet.h"
 #include <set>
 #include <iterator>
 #include <algorithm>
