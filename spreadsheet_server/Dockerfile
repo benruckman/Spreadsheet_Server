@@ -3,7 +3,7 @@
 # did it.  Before running the build, change into the directory containing
 # this Dockerfile.  (Remember, the filename is "Dockerfile" with no
 # extension.)
-#
+# 
 # docker pull ubuntu
 # docker build --tag myubuntu  .
 # 

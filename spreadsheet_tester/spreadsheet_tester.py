@@ -50,8 +50,13 @@ def receiveData(s, terminator, terminatorSize, maxTime):
     # timeout
     start = time.time()
     # while data's size is less than 2 or data hasn't been terminated by \n\n
-    while (len(data) < terminatorSize or data[-terminatorSize] != terminator):
-        data += s.socket.recv(4096)
+    while (len(data) < terminatorSize or not data.endswith(terminator)):
+        s.socket.settimeout(5)
+        try:
+            data += s.socket.recv(1024).decode('utf-8')
+            #print(data[-2])
+        except Exception:
+            1
         # if this loop has gone on for more than a minute, timeout and return that the test failed.
         if (timeout(start, maxTime)):
             return False
@@ -59,8 +64,8 @@ def receiveData(s, terminator, terminatorSize, maxTime):
 
 #run the given number of tests on a server at the given ip address.
 def main(test_number, ip_address):
-    return
-    #attempt connection to given ip_address
+    print("hello world")
+    return -1
 
 #test a correct handshake over spreadsheetSocket s, ensure that the proper data is sent back by server
 #this method creates a new spreadsheet during the handshake.
@@ -176,7 +181,7 @@ def testCellSelect(s1, s2, cellName):
     if (data is False):
         return False;
 
-    return data == "{messageType: \"selected\", cellName: \"" + cellName + "\", selector: " + s1.ID + ", selectorName: \"" + s1.name + "\"}"
+    return "messageType: \"selected\", cellName: \"" + cellName + "\", selector: " + s1.ID + ", selectorName: \"" + s1.name + "\"" in data
 
 #test sending a request to edit a cell on s.currentCell
 #expects s to have completed server handshake.
@@ -191,7 +196,7 @@ def testCellEdit(s, cellString):
     # ensure the following is sent to s:
     #"{messageType: "cellUpdated", cellName: s.currentCell, contents: cellString}"
     data = receiveData(s, "}", 1, 60)
-    return data == "{messageType: \"cellUpdated\", cellName: \"" + s.currentCell + "\", contents: \"" + cellString + ", selectorName: \"" + s.name + "\"}"
+    return "messageType: \"cellUpdated\", cellName: \"" + s.currentCell + "\", contents: \"" + cellString + ", selectorName: \"" + s.name + "\"" in data
 
 #test sending a request to edit a cell different than the one the socket currently has selected.
 #expects s to have completed server handshake.
@@ -223,7 +228,7 @@ def testCellEditError(s, cellString):
     # ensure the following is sent to s:
     # "{ messageType: "requestError", cellName: s.currentCell, message: <some string> }"
     data = receiveData(s, "}", 1, 60)
-    return ("{messageType: \"requestError\", cellName: " + s.currentCell + ", message:") in data
+    return ("messageType: \"requestError\", cellName: " + s.currentCell + ", message:") in data
 
 # test sending an undo request
 # expects s to have completed server handshake and for the currently selected cell to have a backlog of changes.
@@ -238,7 +243,7 @@ def testUndo(s, previousValue):
     # ensure the following is sent to s:
     # { messageType: "cellUpdated", cellName: s.currentCell, contents: previousValue }
     data = receiveData(s, "}", 1, 60)
-    return data == "{ messageType: \"cellUpdated\", cellName: " + s.currentCell + ", contents: \"" + previousValue + "\"}"
+    return "messageType: \"cellUpdated\", cellName: " + s.currentCell + ", contents: \"" + previousValue + "\"" in data
 
 # test sending an invalid undo request
 # expects s to have completed server handshake and for the currently selected cell to NOT have a backlog of changes.
@@ -253,7 +258,7 @@ def testUndoError(s):
     # ensure the following is sent to s:
     # { messageType: "requestError", cellName: s.currentCell, message: <some string> }
     data = receiveData(s, "}", 1, 60)
-    return ("{ messageType: \"requestError\", cellName: " + s.currentCell + ", message:") in data
+    return ("messageType: \"requestError\", cellName: " + s.currentCell + ", message:") in data
 
 # test sending a revert request
 # expects s to have completed server handshake and for the currently selected cell to have a backlog of changes.
@@ -268,7 +273,7 @@ def testRevert(s, previousValue):
     # ensure the following is sent to s:
     # { messageType: "cellUpdated", cellName: s.currentCell, contents: previousValue }
     data = receiveData(s, "}", 1, 60)
-    return data == "{ messageType: \"cellUpdated\", cellName: " + s.currentCell + ", contents: \"" + previousValue + "\"}"
+    return "messageType: \"cellUpdated\", cellName: " + s.currentCell + ", contents: \"" + previousValue + "\"" in data
 
 # test sending an invalid revert request
 # expects s to have completed server handshake and for the currently selected cell to NOT have a backlog of changes.
@@ -283,7 +288,7 @@ def testRevertError(s):
     # ensure the following is sent to s:
     # { messageType: "requestError", cellName: s.currentCell, message: <some string> }
     data = receiveData(s, "}", 1, 60)
-    return ("{ messageType: \"requestError\", cellName: " + s.currentCell + ", message:") in data
+    return ("messageType: \"requestError\", cellName: " + s.currentCell + ", message:") in data
 
 # test disconnecting a client
 # expects s1,s2 to have completed server handshake
@@ -294,8 +299,8 @@ def closeSpreadsheet(s1, s2):
     # ensure the following is sent to s2:
     # {messageType: "disconnected", user: s1.ID}
     data = receiveData(s2, "}", 1, 60)
-    return data == "{ messageType: \"disconnected\", user: " + s1.ID + "}"
+    return "messageType: \"disconnected\", user: " + s1.ID in data
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    main()
+    main(0,0)

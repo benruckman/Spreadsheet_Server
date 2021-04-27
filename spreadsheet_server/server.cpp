@@ -222,7 +222,7 @@ int main(int argc, char* argv[])
 						pthread_mutex_lock(&mutexsheets);
 						auto it = spreads.find(cli->get_ssname());
 						spreadsheet* s = &it->second;
-						s->add_message(message);
+						s->add_message(message, cli->get_id());
 						pthread_mutex_unlock(&mutexsheets);
 					}
 				}
@@ -324,12 +324,17 @@ void* handle_connection(void* sd)
 			else
 			{
 				spreadsheet* s = &it->second;
-				s->add_user(u);
 				std::cout << "Added user " << name << " to existing spreadsheet " << ssname << " with ID " << i << std::endl;
-
+				// send user state of spreadsheet
 				s->send_spreadsheet(u->get_socket());
-				// TODO: Get data from spreadsheet and send it to the client
-
+				s->send_selections(u->get_socket());
+				s->add_user(u);
+				// send user their ID
+				/*std::string user = std::to_string(selector) + "\n";
+				int n = user.length();
+				char message[n + 1];
+				strcpy(message, s.c_str());
+				send(newfd, message, strlen(message), 0);*/
 			}
 			pthread_mutex_unlock(&mutexsheets);
 			break;
@@ -379,13 +384,15 @@ void shut_down(int sigint)
 	{
 		if (clients[i].get_id() != -1)
 		{
-			std::cout << clients[i].get_username() << " : " << clients[i].get_id() << std::endl;
-			char* message = "{\"messageType\" : \"serverError\", \"message\" : \"Server Error: Shutting down\"}\n";
+			spreadsheet ss("");
+			string s = ss.serialize_server_shutdown("serverError", "Server is closing");
+			int n = s.length();
+			char message[n + 1];
+			strcpy(message, s.c_str());
 			send(clients[i].get_socket(), message, strlen(message), 0);
 		}
 	}
 	pthread_mutex_unlock(&mutex);
-
 
 	pthread_mutex_lock(&mutexsheets);
 	for (auto it : spreads)

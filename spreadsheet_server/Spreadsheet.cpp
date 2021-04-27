@@ -26,6 +26,15 @@ pthread_mutex_t mutexqueue = PTHREAD_MUTEX_INITIALIZER;
 using namespace std;
 
 
+struct message
+{
+	string type{};
+	string name{};
+	string contents{};
+	user* sender{};
+};
+
+
 /*
  * Constructor: Creates a spreadsheet.
  * If the name matches an existing spreadsheet text file, that file is opened and
@@ -47,15 +56,13 @@ spreadsheet::spreadsheet(string name)
   queue<cell> history;
   this->spreadsheet_history = history;
 
-    
-  queue<tuple<string, string, string>> messages;
+  queue<message> messages;
   this->message_queue = messages;
   
   vector<user> users;
   this->user_list = users;
 
-  // Open the spreadsheet if it exists
-  // open_spreadsheet(name);
+  open_spreadsheet(name);
 }
 
 
@@ -101,10 +108,16 @@ void spreadsheet::set_name(string name)
  *
  * @param new_message - the JSON string representing a new message request
  */
-void spreadsheet::add_message(string new_message)
+void spreadsheet::add_message(string new_message, int ID)
 {
   pthread_mutex_lock(&mutexqueue);
-  message_queue.push(deserialize_message(new_message));
+  message m = deserialize_message(new_message);
+  for (vector<user>::iterator it = user_list.begin(); it != user_list.end(); it++)
+  {
+	  if (it->get_id() == ID)
+		  m.sender = &(*it);
+  }
+  message_queue.push(m);
   pthread_mutex_unlock(&mutexqueue);
   return;
 }
@@ -334,6 +347,7 @@ map<string, string> spreadsheet::open_spreadsheet(string file_name)
 		size_t last_index = line.find_first_of(" ");
 		cell_name = line.substr(0, last_index);
 		cell_contents = line.substr(cell_name.length() + 1);
+    
 		cout << cell_name << " " << cell_contents << endl;
 		set_contents_of_cell(cell_name, cell_contents);
 		cout << non_empty_cells.size() << std::endl;
@@ -342,7 +356,7 @@ map<string, string> spreadsheet::open_spreadsheet(string file_name)
 }
 
 
-/*./a.
+/*
  * TODO: Document
  */
 string spreadsheet::normalize(string cell_contents)
@@ -364,25 +378,36 @@ string spreadsheet::normalize(string cell_contents)
 
 bool spreadsheet::process_messages()
 {
-  /*
 	pthread_mutex_lock(&mutexqueue);
 	while (message_queue.size() > 0)
 	{
-		string message = message_queue.front()[0];
+		message m = message_queue.front();
 		this->message_queue.pop();
-		std::cout << message << std::endl;
+		string message;
+		if (m.type == "editCell")
+		{
+			message = serialize_cell_update("cellUpdated", m.name, m.contents);
+		}
+		else if (m.type == "selectCell")
+		{
+			message = serialize_cell_selected("cellSelected", m.name, m.sender->get_id(), m.sender->get_username());
+			m.sender->set_current(m.name);
+			std::cout << "Sender: " << m.sender << std::endl;
+			std::cout << "senders current: "<< m.sender->get_current() << std::endl;
+		}
+    
+		//TODO: add additional checks
 		int n = message.length();
-		// manipulate message if it is a valid request
-		char m[n + 1];
-		strcpy(m, message.c_str());
+		char mess[n + 1];
+		strcpy(mess, message.c_str());
 		for (vector<user>::iterator it = user_list.begin(); it != user_list.end(); it++)
 		{
 			// TODO: parse and send correct message
-			//send(it->get_socket(), mess, strlen(mess), 0);
+			send(it->get_socket(), mess, strlen(mess), 0);
 		}
 	}
 	pthread_mutex_unlock(&mutexqueue);
-  */
+  
 	return true;
 }
 
@@ -428,15 +453,11 @@ DependencyGraph spreadsheet::get_dependency_graph()
 // sends the entire spreadsheet to a socket
 void spreadsheet::send_spreadsheet(int socket)
 {
+	std::cout << "Sending initial spreadsheet: " << std::endl;
 	for (map<string, string>::iterator it = non_empty_cells.begin(); it != non_empty_cells.end(); it++)
 	{
-		std::string s;
-		s.append("{\"messageType\" : \"cellUpdated\", \"cellName\" : \"");
-		s.append(it->first);
-		s.append("\", \"contents\" : \"");
-		s.append(it->second);
-		s.append("\"}\n");
-
+		std::cout << "Sending initial cell: " << it->first << std::endl;
+		std::string s = serialize_cell_update("cellUpdate", it->first, it->second);
 		int n = s.length();
 		char message[n + 1];
 		strcpy(message, s.c_str());
@@ -447,21 +468,30 @@ void spreadsheet::send_spreadsheet(int socket)
 
 void spreadsheet::send_disconnect(int ID)
 {
-	std::cout << "SENDING DISCONNECT" << std::endl;
-	std::string id = std::to_string(ID);
-	std::string s;
-	s.append("{\"messageType\" : \"disconnected\", \"user\" : \"");
-	s.append(id);
-	s.append("\"}\n");
+	std::string s = serialize_disconnected("disconnected", ID);
 	int n = s.length();
 	char message[n + 1];
 	strcpy(message, s.c_str());
 	for (vector<user>::iterator it = user_list.begin(); it != user_list.end(); it++)
 	{
-		std::cout << "SENDING DISCONNECT TO USER "<< it->get_username() << std::endl;
+		std::cout << "DISCONNECTED: " << message << std::endl;
 		send(it->get_socket(), message, strlen(message), 0);
 	}
+}
 
+void spreadsheet::send_selections(int socket)
+{
+	std::cout << "Sending initial selections: " << std::endl;
+	for (vector<user>::iterator it = user_list.begin(); it != user_list.end(); it++)
+	{
+		std::cout << "Sending initial selection: " << it->get_current() << std::endl;
+		std::string s = serialize_cell_selected("cellSelected", it->get_current(), it->get_id(), it->get_username());
+		int n = s.length();
+		char message[n + 1];
+		strcpy(message, s.c_str());
+		std::cout << message << std::endl;
+		send(socket, message, strlen(message), 0);
+	}
 }
 
 /*
@@ -469,88 +499,86 @@ void spreadsheet::send_disconnect(int ID)
  */
 string spreadsheet::serialize_cell_update(string messageType, string cellName, string contents)
 {
-  string output = "{messageType: \"" + messageType + "\", cellName: " + cellName + ", contents: " + contents + "}";
+  string output = "{\"messageType\" : \"" + messageType  + "\", \"cellName\" : \"" + cellName + "\", \"contents\" : \"" + contents + "\"}\n";
   return output;
 }
+
 /*
  *TODO: Document
  */
 string spreadsheet::serialize_cell_selected(string messageType, string cellName, int selector, string selectorName)
 {
-  string output = "{messageType: \"" + messageType + "\", cellName: " + cellName + ", selector: " + std::to_string(selector) + ", selectorName: " + selectorName + "}";
+  string output = "{\"messageType\" : \"" + messageType + "\", \"cellName\" : \"" + cellName + "\", \"selector\" : \"" + std::to_string(selector) + "\", \"selectorName\" : \"" + selectorName + "\"}\n";
   return output;
 } 
+
 /*
  *TODO: Document
  */
 string spreadsheet::serialize_disconnected(string messageType, int user)
 {
-  string output = "{messageType: \"" + messageType + "\", user: " + std::to_string(user) + "}";
+  string output = "{\"messageType\" : \"" + messageType + "\", \"user\" : \"" + std::to_string(user) + "\"}\n";
   return output;
 } 
+
 /*
  *TODO: Document
  */
 string spreadsheet::serialize_invalid_request(string messageType, string cellName, string message)
 {
-  string output = "{messageType: \"" + messageType + "\", cellName: " + cellName + ", message: " + message + "}";
-  return output;
-} 
-/*
- *TODO: Document
- */
-string spreadsheet::serialize_server_shutdown(string messageType, string message)
-{
-  string output = "{messageType: \"" + messageType + "\", message: " + message + "}";
+  string output = "{\"messageType\" : \"" + messageType + "\", \"cellName\" : \"" + cellName + "\", \"message\" : \"" + message + "\"}\n";
   return output;
 } 
 
 /*
  *TODO: Document
  */
-tuple<string, string, string> spreadsheet::deserialize_message(string input)
+ string spreadsheet::serialize_server_shutdown(string messageType, string message)
 {
-  tuple <string, string, string> result;
-  // std::regex regex(",");
-  //std::vector<std::string> firstOutput(std::sregex_token_iterator(input.begin(), input.end(), regex, -1), std::sregex_token_iterator());
-  // std::regex another_regex(":");
-  //std::vector<std::string> secondOutput(std::sregex_token_iterator(input.begin(), input.end(), another_regex, -1), std::sregex_token_iterator());
-  vector<string> firstOutput = split(input, ',');
-  string secondInput = "";
-  for(int i = 0; i < firstOutput.size(); i++)
+  string output = "{\"messageType\" : \"" + messageType + "\", \"message\" : \"" + message + "\"}\n";
+  return output;
+} 
+
+/*
+ *TODO: Document
+ */
+spreadsheet::message spreadsheet::deserialize_message(string input)
+{
+  message result;
+  string tester = "\"";
+  int start = 0;
+  string outputs[6]{ "","","","","","" };
+  
+  int i = 0;
+  while (input.find(tester, start) != string::npos)
   {
-    secondInput += firstOutput[i];
+	 int findPos = input.find(tester, start); //finds first quote mark
+	 int findPos2 = input.find(tester, findPos + 1); //finds second quote mark
+	 std::string name; 
+	 string neww = input.substr(findPos + 1, (findPos2 - findPos) - 1); 
+	 outputs[i] = neww;
+	 start = findPos2 + 1;
+	 i++;
   }
-  vector<string> secondOutput = split(secondInput, ':');
-  if(secondOutput.size() == 6)
-  {
-    result = make_tuple(secondOutput[1], secondOutput[3], secondOutput[5].substr(0, secondOutput[5].length() - 1));
-  }  
-  if(secondOutput.size() == 4)
-  {
-    result = make_tuple(secondOutput[1], secondOutput[3].substr(0, secondOutput[3].length() - 1), NULL);
-  }
-  if(secondOutput.size() == 2)
-  {
-    result = make_tuple(secondOutput[1].substr(0, secondOutput[1].length() - 1), NULL, NULL);
-  }
+  
+	result.type = outputs[1];
+	result.name = outputs[3];
+	result.contents = outputs[5];
+ 
   return result;
 } 
-
-queue<tuple<string, string, string>> spreadsheet::get_message_queue()
-{
-  return this->message_queue;
-}
 
 vector<string> spreadsheet::split(string str, char delimeter)
 {
   std::stringstream ss(str);
   string item;
   vector<string> splittedStrings;
+  
   while(std::getline(ss, item, delimeter))
   {
     splittedStrings.push_back(item);
   }
+  
     return splittedStrings;
 }
 

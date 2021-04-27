@@ -25,6 +25,14 @@ class spreadsheet
     string cell_name;
     string cell_contents;
   };
+
+  struct message
+  {
+      string type{};
+      string name{};
+      string contents{};
+      user* sender{};
+  };
   
   private : 
   
@@ -41,7 +49,7 @@ class spreadsheet
     map<string, queue<string>> cell_history;    
 
     // Keeps track of all request messages that clients send to the server
-    queue<tuple<string, string, string>> message_queue;
+    queue<message> message_queue;
     
     // Keeps track of all the users that are connected to the spreadsheet
     vector<user> user_list;
@@ -61,10 +69,8 @@ class spreadsheet
     map<string, queue<string>> get_cell_history();
 
     queue<cell> get_spreadsheet_history();
-
-   
-    //Adds a message to the message queue
-   void add_message(string new_message);
+  
+    void add_message(string new_message, int id);
     
     // Sets the name of the spreadsheet
     void set_name(string name);
@@ -117,6 +123,9 @@ class spreadsheet
     // sends a disconnect message to all connected clients
     void send_disconnect(int ID);
 
+    // sends the current selections
+    void send_selections(int ID);
+
     //returns the dependency graph 
     DependencyGraph get_dependency_graph();
 
@@ -127,11 +136,11 @@ class spreadsheet
     string serialize_invalid_request(string messageType, string cellName, string message);
     string serialize_server_shutdown(string messageType, string message);
     //deserialize the incoming messages from the client to the server
-    tuple<string, string, string> deserialize_message(string input);
+    message deserialize_message(string input);
 
     vector<string> split(string str, char delimeter);
 
-    queue<tuple<string, string, string>> get_message_queue();
+    queue<message> get_message_queue();
 
     map<string, string> get_non_empty_cells();
 };
