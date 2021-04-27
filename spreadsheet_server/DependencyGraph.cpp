@@ -5,7 +5,7 @@
 
 using namespace std;
 
-DependencyGraph::DependencyGraph()
+DependencyGraph:: DependencyGraph()
 {
   map<string, set<string> > dependents;
   map<string, set<string> > dependees;
@@ -110,11 +110,66 @@ void DependencyGraph::addDependency(const string &s, const string &t)
     if(pairAdded) p_size++;
 }
 void DependencyGraph::removeDependency(const string &s, const string &t){
+  bool pairRemoved = false;
+    if(hasDependents(s)){
+        set<string> dependentList_s = getDependents(s);
+        if(dependentList_s.size() > 0){
+            //if there's one element left before we remove this, remove the key from the map.
+            if(getDependeesNumber(s) == 1){
+              dependents.erase(s);
+              pairRemoved = true;
+            }
+            //if there's more than one, just remove t from its set.
+            else{
+              dependentList_s.erase(t);
+              pairRemoved = true;
+              dependents[s] = dependentList_s;
+            }
+        }
+    }
+    if(hasDependees(t)){
+        set<string> dependeeList_t = getDependees(s);
+        if(dependeeList_t.size() > 0){
+            //if there's one element left before we remove this, remove the key from the map.
+            if(getDependeesNumber(s) == 1){
+              dependees.erase(t);
+              pairRemoved = true;
+            }
+            //if there's more than one, just remove t from its set.
+            else{
+              dependeeList_t.erase(s);
+              pairRemoved = true;
+              dependents[t] = dependeeList_t;
+            }
+        }
+    }
+    if(pairRemoved){
+        p_size--;
+    }
 }
 void DependencyGraph::replaceDependents(const string &s, const set<string> newDependents){
+    set<string> dependentList_s = getDependents(s);
+    if(dependentList_s.size() > 0){
+      for (set<string>::iterator i = dependentList_s.begin(); i != dependentList_s.end(); i++) {
+          removeDependency(s, *i);
+      }
+    }
+    for (set<string>::iterator i = newDependents.begin(); i != newDependents.end(); i++) {
+      addDependency(s, *i);
+    }
 }
 void DependencyGraph::replaceDependees(const string &s, const set<string> newDependees){
+    set<string> dependeeList_s = getDependees(s);
+    if(dependeeList_s.size() > 0){
+      for (set<string>::iterator i = dependeeList_s.begin(); i != dependeeList_s.end(); i++) {
+          removeDependency(*i, s);
+      }
+    }
+    for (set<string>::iterator i = newDependees.begin(); i != newDependees.end(); i++) {
+      addDependency(*i, s);
+    }
 }
+
 
 
 
