@@ -261,6 +261,11 @@ namespace SS
             return drawingPanel.ChangeUserSelection(col, row, userName);
         }
 
+        public bool RemoveUserSelection(int col, int row, int userName)
+        {
+            return drawingPanel.RemoveUserSelection(col, row, userName);
+        }
+
         /// <summary>
         /// Assigns the column and row of the current selection to the
         /// out parameters.
@@ -421,6 +426,14 @@ namespace SS
                         otherUsers.Remove(userName);
                     otherUsers.Add(userName, new Address(col, row));
                 }
+                Invalidate();
+                return true;
+            }
+
+            public bool RemoveUserSelection(int col, int row, int userName)
+            {
+                if (otherUsers.ContainsKey(userName))
+                    otherUsers.Remove(userName);
                 Invalidate();
                 return true;
             }
