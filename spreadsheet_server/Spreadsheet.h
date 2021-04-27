@@ -25,6 +25,14 @@ class spreadsheet
     string cell_name;
     string cell_contents;
   };
+
+  struct message
+  {
+      string type{};
+      string name{};
+      string contents{};
+      user sender{};
+  };
   
   private : 
   
@@ -39,7 +47,7 @@ class spreadsheet
     queue<cell> cell_history;
     
     // Keeps track of all request messages that clients send to the server
-    queue<tuple<string, string, string>> message_queue;
+    queue<message> message_queue;
     
     // Keeps track of all the users that are connected to the spreadsheet
     vector<user> user_list;
@@ -57,7 +65,7 @@ class spreadsheet
     ~spreadsheet();
     
     // Adds a message to the message queue
-    void add_message(string new_message);
+    void add_message(string new_message, user sender);
     
     // Sets the name of the spreadsheet
     void set_name(string name);
@@ -117,11 +125,11 @@ class spreadsheet
     string serialize_invalid_request(string messageType, string cellName, string message);
     string serialize_server_shutdown(string messageType, string message);
     //deserialize the incoming messages from the client to the server
-    tuple<string, string, string> deserialize_message(string input);
+    message deserialize_message(string input);
 
     vector<string> split(string str, char delimeter);
 
-    queue<tuple<string, string, string>> get_message_queue();
+
 };
 
 #endif
