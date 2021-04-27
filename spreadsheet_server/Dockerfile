@@ -3,7 +3,7 @@
 # did it.  Before running the build, change into the directory containing
 # this Dockerfile.  (Remember, the filename is "Dockerfile" with no
 # extension.)
-#
+# 
 # docker pull ubuntu
 # docker build --tag myubuntu  .
 # 
@@ -32,8 +32,10 @@ ENV TZ="America/Salt Lake City"
 
 RUN apt-get -y update && apt-get -y install \
    g++ \
-   emacs-nox 
+   emacs-nox \
+   
+   
 
 COPY . /Server
 
-RUN cd /Server && g++ -std=c++11 -pthread server.cpp user.cpp
+RUN cd /Server && g++ -std=c++11 -pthread spreadsheet.cpp server.cpp user.cpp

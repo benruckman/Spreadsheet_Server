@@ -1,25 +1,57 @@
 #include "user.h"
-
+#include <string>
+#include <strings.h>
+user::user()
+{
+	this->id = -1;
+	this->username = "";
+	this->size = 0;
+	this->socket = -1;
+	this->ssname =""; 
+	this->buffer = NULL;	
+}
 /*
  * TODO: Fill out documentation
  * negative ids are invalid.
  */
-user::user(int buffer_size)
+user::user(int id, int socket, std::string username, std::string ssname)
 {
-  this->id = -1;
-  this->username = "";
-  this->size = buffer_size;
-  
-  clear_buffer();
+  this->id = id;
+  this->username = username;
+  this->size = 1024;
+  this->socket = socket;  
+  this->ssname = ssname;
+  char buffer[1024];
+  this->buffer = buffer;
+  this->currcell = "A1";
 }
-
+ 
 /*
  * TODO: Fill out documentation
  */
 user::~user()
 {
-  clean();
+
 }
+/*
+ * TODO: Fill out documentation
+ * negative ids are invalid.
+ */
+std::string user::get_ssname()
+{
+  return this->ssname;
+}
+
+std::string user::get_current()
+{
+	return this->currcell;
+}
+
+void user::set_current(std::string curr)
+{
+	this->currcell = curr;
+}
+
 
 /*
  * TODO: Fill out documentation
@@ -27,16 +59,18 @@ user::~user()
  */
 int user::get_id()
 {
-  return id;
+  return this->id;
 }
 
 /*
  * TODO: Fill out documentation
+ * negative ids are invalid.
  */
-void user::set_id(int new_id)
+int user::get_socket()
 {
-  id = new_id;
+    return this->socket;
 }
+
 
 /*
  * TODO: Fill out documentation
@@ -49,14 +83,6 @@ std::string user::get_username()
 /*
  * TODO: Fill out documentation
  */
-void user::set_username(std::string new_username)
-{
-  this->username = new_username;
-}
-  
-/*
- * TODO: Fill out documentation
- */
 char* user::get_buffer()
 {
   return this->buffer;
@@ -64,19 +90,7 @@ char* user::get_buffer()
 
 void user::clear_buffer()
 {
-  clean();
-  
-  char* new_buffer = new char[size];
-    
-  for(int i = 0; i <= this->size; i++)
-  {
-    new_buffer[i] = 0;
-  }
-    
-  this->buffer = new_buffer;
+  bzero(this->buffer, 1024);
 }
 
-void user::clean()
-{
-  delete [] this->buffer;
-}
+
