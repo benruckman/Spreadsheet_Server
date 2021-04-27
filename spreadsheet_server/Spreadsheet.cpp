@@ -176,18 +176,20 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 			get_dependency_graph().replaceDependents(name, newDependents);
 		}
 
-		c->cell_contents.push(content);
-		non_empty_cells[name] = *c;
-		cell previousCell;
 		if (!undo)
 		{
+			std::cout << "pushing " << content << " to " << name << std::endl;
+			c->cell_contents.push(content);
 			spreadsheet_history.push(name);
-			std::cout << "Added " << name << " to the history " << std::endl;
 		}
+		non_empty_cells[name] = *c;
+		
+			
 		return true;
 	}
 	else
 	{
+
 		if (content[0] == '=') // this is a formula
 		{
 			vector<string> var = get_variables(content);
@@ -202,12 +204,8 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 		c.cell_contents = history;
 		c.cell_contents.push(content);
 		non_empty_cells[name] = c;
-		if (!undo)
-		{
-			spreadsheet_history.push(name);
-			std::cout << "Added " << name << " to the history " << std::endl;
-		}
-
+		spreadsheet_history.push(name);
+			
 		return true;
 	}
 }
@@ -251,75 +249,79 @@ map<string, queue<string>> spreadsheet::get_cell_history()
  */
 string spreadsheet::revert_cell(string selectedCell)
 {
-
-	//queue<string> cellHistory = cell_history[selectedCell];
-	//std::cout << cellHistory.front() << std::endl;
-	//string latestContent = get_cell_contents(selectedCell);
-	//std::cout << latestContent << std::endl;
-	///*
-	//if(!set_contents_of_cell(selectedCell, latestContent))
- //{
- //  //return dependency error
- //}
-	//*/
-	//cell latestCell;
-	//latestCell.cell_name = selectedCell;
-	//latestCell.cell_contents = latestContent;
-	//spreadsheet_history.push(latestCell);
-	////std::cout << cellHistory.front().cell_name << std::endl;
-	////std::cout << cellHistory.front().cell_contents << std::endl;
-	//string new_change = selectedCell + " " + cellHistory.front();
-	//std::cout << cellHistory.front() << std::endl;
-	//non_empty_cells.erase(selectedCell);
-	//non_empty_cells[selectedCell] = cellHistory.front();
-	//cell_history[selectedCell].pop();
-	//return new_change;
-	return "";
+	std::cout << "reverting " << selectedCell << std::endl;
+	auto it = non_empty_cells.find(selectedCell);
+	string ret = selectedCell + " ";
+	if (it != non_empty_cells.end())
+	{
+		std::cout << "found " << selectedCell << std::endl;
+		cell* c = &it->second;
+		if (c->cell_contents.empty())
+		{
+			std::cout << selectedCell << " is already empty" << std::endl;
+		}
+		else
+		{
+			c->cell_contents.pop();
+			if (c->cell_contents.empty())
+			{
+				non_empty_cells.erase(selectedCell);
+				std::cout << selectedCell << " is now empty" << std::endl;
+			}
+			else
+			{
+				string newc = c->cell_contents.top();
+				set_contents_of_cell(selectedCell, newc, false);
+				ret = selectedCell + " " + newc;
+				std::cout << selectedCell << " is now "<< newc << std::endl;
+			}
+		}
+		c->cell_contents.pop();
+	}
+	else
+	{
+		ret = "";
+	}
+	std::cout << ret << " was returned " << std::endl;
+	return ret;
 }
 
 string spreadsheet::undo()
 {
 	if (!spreadsheet_history.empty())
 	{
-		std::cout << "history size: " << spreadsheet_history.size() << std::endl;
 		string last = spreadsheet_history.top();
 		auto it = non_empty_cells.find(last);
-		string ret = last + "";
+		string ret = last + " ";
 		if (it != non_empty_cells.end())
 		{
-			std::cout << "found cell to undo: " << last << std::endl;
 			cell* c = &it->second;
 			if (c->cell_contents.empty())
 			{
-				std::cout << "contents already empty" << std::endl;
 			}
 			else
 			{
 				c->cell_contents.pop();
 				if (c->cell_contents.empty())
 				{
-					std::cout << "contents now empty" << std::endl;
+					non_empty_cells.erase(last);
 				}
 				else
-				{	
+				{
 					string newc = c->cell_contents.top();
 					set_contents_of_cell(last, newc, true);
-					string ret = last + " " + newc;
-					std::cout << "contents now "<< newc << std::endl;
 					ret = last + " " + newc;
 				}
 			}
 		}
 		else
 		{
-			std::cout << "couldn't find " << last << std::endl;
 		}
 		spreadsheet_history.pop();
 		return ret;
 	}
+	return "";
 }
-
-
 
 /*
  * TODO: Document
@@ -414,12 +416,18 @@ bool spreadsheet::process_messages()
 		}
 		else if (m.type == "revertCell")
 		{
-
-			message = serialize_cell_update("cellUpdated", m.name, m.contents);
+			string line = revert_cell(m.name);
+			if (line != "")
+			{
+				size_t last_index = line.find_first_of(" ");
+				std::string cell_name = line.substr(0, last_index);
+				std::string cell_contents = line.substr(cell_name.length() + 1);
+				message = serialize_cell_update("cellUpdated", cell_name, cell_contents);
+			}
 		}
 		else
 		{
-
+			return false;
 		}
 		int n = message.length();
 		char mess[n + 1];
@@ -486,7 +494,6 @@ void spreadsheet::send_spreadsheet(int socket)
 	}
 }
 
-
 void spreadsheet::send_disconnect(int ID)
 {
 	std::string s = serialize_disconnected("disconnected", ID);
@@ -495,7 +502,7 @@ void spreadsheet::send_disconnect(int ID)
 	strcpy(message, s.c_str());
 	for (vector<user>::iterator it = user_list.begin(); it != user_list.end(); it++)
 	{
-		std::cout << "DISCONNECTED: " << message << std::endl;
+		std::cout << message << std::endl;
 		send(it->get_socket(), message, strlen(message), 0);
 	}
 }
@@ -508,7 +515,6 @@ void spreadsheet::send_selections(int socket)
 		int n = s.length();
 		char message[n + 1];
 		strcpy(message, s.c_str());
-		std::cout << message << std::endl;
 		send(socket, message, strlen(message), 0);
 	}
 }
@@ -536,7 +542,7 @@ string spreadsheet::serialize_cell_selected(string messageType, string cellName,
  */
 string spreadsheet::serialize_disconnected(string messageType, int user)
 {
-	string output = "{\"messageType\" : \"" + messageType + "\", \"user\" : \"" + std::to_string(user) + "\"}\n";
+	string output = "{\"messageType\" : \"" + messageType + "\", \"user\" :"  + std::to_string(user) + "}\n";
 	return output;
 }
 
@@ -563,6 +569,7 @@ string spreadsheet::serialize_server_shutdown(string messageType, string message
  */
 spreadsheet::message spreadsheet::deserialize_message(string input)
 {
+
 	message result;
 	string tester = "\"";
 	int start = 0;

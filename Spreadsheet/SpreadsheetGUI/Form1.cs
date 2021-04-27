@@ -76,11 +76,11 @@ namespace SpreadsheetGUI
                 MessageBox.Show("Request error: " + message.errorMessage);
             }
 
-            if(message.type.Equals("disconnected"))
+            if (message.type.Equals("disconnected"))
             {
-                int col = spreadsheetPanel1.GetCellNameCol(message.cellName);
-                int row = spreadsheetPanel1.GetCellNameRow(message.cellName);
-                spreadsheetPanel1.RemoveUserSelection(col, row, message.selectorID);
+                //int col = spreadsheetPanel1.GetCellNameCol(message.cellName);
+                //int row = spreadsheetPanel1.GetCellNameRow(message.cellName);
+                spreadsheetPanel1.RemoveUserSelection(message.selectorID);
             }
 
             if (message.type.Equals("serverError"))
