@@ -63,10 +63,9 @@ namespace SpreadsheetGUI
             {
                 int col = spreadsheetPanel1.GetCellNameCol(message.cellName);
                 int row = spreadsheetPanel1.GetCellNameRow(message.cellName);
-                spreadsheetPanel1.ChangeUserSelection(col, row, message.selectorID); //Might want to actually send the username, but might want to keep it this way, not sure yet
+                spreadsheetPanel1.ChangeUserSelection(col, row, message.selectorID); 
             }
 
-            
 
             if (message.type.Equals("requestError"))
             {
@@ -75,7 +74,9 @@ namespace SpreadsheetGUI
 
             if(message.type.Equals("disconnected"))
             {
-                // remove disconnected user from our list
+                int col = spreadsheetPanel1.GetCellNameCol(message.cellName);
+                int row = spreadsheetPanel1.GetCellNameRow(message.cellName);
+                spreadsheetPanel1.RemoveUserSelection(col, row, message.selectorID);
             }
 
             if (message.type.Equals("serverError"))
