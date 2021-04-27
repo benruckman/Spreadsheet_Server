@@ -14,6 +14,7 @@
 #include <ostream>
 #include <tuple>
 #include <string>
+#include <stack>
 
 using namespace std;
 
@@ -23,7 +24,7 @@ class spreadsheet
   struct cell
   {
     string cell_name;
-    string cell_contents;
+    std::stack<string> cell_contents;
   };
 
   struct message
@@ -40,11 +41,11 @@ class spreadsheet
     string spreadsheet_name;
         
     // Key is the name of the cell, and the value is the contents of a particular cell
-    map<string, string> non_empty_cells;
+    map<string, cell> non_empty_cells;
     
     // DependencyGraph g; *needs to create a dependencygraph class so that when cells are getting changed, all other cells that depend on it could be changed
     // Keeps track of all the changes that has been made to the cell
-    queue<cell> spreadsheet_history;
+    std::stack<string> spreadsheet_history;
     
     map<string, queue<string>> cell_history;    
 
@@ -68,7 +69,7 @@ class spreadsheet
     
     map<string, queue<string>> get_cell_history();
 
-    queue<cell> get_spreadsheet_history();
+    std::stack<std::string> get_spreadsheet_history();
   
     void add_message(string new_message, int id);
     
@@ -83,13 +84,13 @@ class spreadsheet
     string get_cell_value(string name);
     
     // Returns the contents(as opposed to the values) of the named cell
-    string get_cell_contents(string name);
+    cell get_cell_contents(string name);
     
     // Returns all non-empty cells in the particular spreadsheet
     vector<string> get_names_of_all_non_empty_cells();
     
     // Passing in a bool called undo to check what the contents of the cell be set to
-    bool set_contents_of_cell(string name, string content);
+    bool set_contents_of_cell(string name, string content, bool undo);
     
     // This method will undo the change made to the spreadsheet
     string revert_cell(string selectedCell);
@@ -106,7 +107,7 @@ class spreadsheet
     void save();
     
     // Server can call this method to open a spreadsheet, it will return all nonempty cells in the spreadsheet and the server can convert it to json and send it to client
-    map<string, string> open_spreadsheet(string file_name);
+    void open_spreadsheet(string file_name);
     
     // Normalize the cell contents so that they are all uppercase
     string normalize(string content);
@@ -142,7 +143,7 @@ class spreadsheet
 
     queue<message> get_message_queue();
 
-    map<string, string> get_non_empty_cells();
+    map<string, cell> get_non_empty_cells();
 };
 
 #endif
