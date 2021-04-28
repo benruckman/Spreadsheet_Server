@@ -25,6 +25,7 @@ class spreadsheet
   {
     string cell_name;
     std::stack<string> cell_contents;
+    std::stack<string> current_reverts;
   };
 
   struct message
@@ -33,6 +34,12 @@ class spreadsheet
       string name{};
       string contents{};
       user* sender{};
+  };
+
+  struct edit
+  {
+      string name{};
+      string contents{};
   };
   
   private : 
@@ -46,6 +53,8 @@ class spreadsheet
     // DependencyGraph g; *needs to create a dependencygraph class so that when cells are getting changed, all other cells that depend on it could be changed
     // Keeps track of all the changes that has been made to the cell
     std::stack<string> spreadsheet_history;
+
+    std::stack<edit> history_real;
     
     map<string, queue<string>> cell_history;    
 
