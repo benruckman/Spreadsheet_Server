@@ -168,6 +168,9 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 		if (content[0] == '=') // this is a formula
 		{
 			vector<string> var = get_variables(content);
+			if(creates_circular_dependency(name, var)){
+				return false;
+			}
 			set<string> newDependents;
 			for (int i = 0; i < var.size(); i++)
 			{
@@ -191,6 +194,9 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 		if (content[0] == '=') // this is a formula
 		{
 			vector<string> var = get_variables(content);
+			if(creates_circular_dependency(name, var)){
+				return false;
+			}
 			for (int i = 0; i < var.size(); i++)
 			{
 				get_dependency_graph().addDependency(name, var[i]);
@@ -212,6 +218,23 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 	}
 }
 
+/*
+* Checks that if these vars were to belong in some formula in the cell with name, they do not cause a circular dependency.
+* Returns true if a circular dependency is caused, false if not.
+*/
+bool spreadsheet::creates_circular_dependency(const string name, const vector<string> &vars){
+	for(int i = 0; i < vars.size(); i++){
+		if(get_dependency_graph().hasDependents(vars[i])){
+			set<string> var_dependents = get_dependency_graph().getDependents(vars[i]);
+    		for (set<string>::iterator i = var_dependents.begin(); i != var_dependents.end(); i++) {
+    			if(*i == name){
+    				return true;
+    			}
+			}
+		}
+	}
+	return false;
+}
 
 /*
  * TODO: Document
@@ -394,7 +417,14 @@ bool spreadsheet::process_messages()
 		if (m.type == "editCell")
 		{
 			message = serialize_cell_update("cellUpdated", m.name, m.contents);
-			set_contents_of_cell(m.name, m.contents, false);
+			if(!set_contents_of_cell(m.name, m.contents, false)){
+				message = serialize_invalid_request("requestError", m.name, "Circular dependency created.");
+				int n = message.length();
+				char mess[n + 1];
+				strcpy(mess, message.c_str());
+				send(m.sender->get_id(), mess, strlen(mess), 0);
+				return true;
+			}
 		}
 		else if (m.type == "selectCell")
 		{

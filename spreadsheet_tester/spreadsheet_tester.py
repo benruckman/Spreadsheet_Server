@@ -64,8 +64,8 @@ def receiveData(s, terminator, terminatorSize, maxTime):
 
 #run the given number of tests on a server at the given ip address.
 def main(test_number, ip_address):
-    print("hello world")
-    return -1
+    print("hello world\n")
+    return 0
 
 #test a correct handshake over spreadsheetSocket s, ensure that the proper data is sent back by server
 #this method creates a new spreadsheet during the handshake.
@@ -179,7 +179,7 @@ def testCellSelect(s1, s2, cellName):
     # return true if everything processes as expected, return false if error occurs.
     data = receiveData(s2, "}", 1, 60)
     if (data is False):
-        return False;
+        return False
 
     return "messageType: \"selected\", cellName: \"" + cellName + "\", selector: " + s1.ID + ", selectorName: \"" + s1.name + "\"" in data
 

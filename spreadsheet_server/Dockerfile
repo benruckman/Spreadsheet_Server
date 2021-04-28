@@ -31,11 +31,10 @@ ENV TZ="America/Salt Lake City"
 # this may be reasonable temporarily.
 
 RUN apt-get -y update && apt-get -y install \
-   g++ \
-   emacs-nox \
+   g++
    
    
 
-COPY . /Server
+COPY . .
 
-RUN cd /Server && g++ -std=c++11 -pthread spreadsheet.cpp server.cpp user.cpp
+RUN g++ -std=c++11 -pthread spreadsheet.cpp server.cpp user.cpp DependencyGraph.cpp -o spreadsheet_server
