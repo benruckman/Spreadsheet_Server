@@ -548,7 +548,7 @@ void spreadsheet::send_selections(int socket)
  */
 string spreadsheet::serialize_cell_update(string messageType, string cellName, string contents)
 {
-	string output = "{\"messageType\" : \"" + messageType + "\", \"cellName\" : \"" + cellName + "\", \"contents\" : \"" + contents + "\"}\n";
+	string output = "{\"messageType\": \"" + messageType + "\", \"cellName\": \"" + cellName + "\", \"contents\": \"" + contents + "\"}\n";
 	return output;
 }
 
@@ -557,7 +557,7 @@ string spreadsheet::serialize_cell_update(string messageType, string cellName, s
  */
 string spreadsheet::serialize_cell_selected(string messageType, string cellName, int selector, string selectorName)
 {
-	string output = "{\"messageType\" : \"" + messageType + "\", \"cellName\" : \"" + cellName + "\", \"selector\" : \"" + std::to_string(selector) + "\", \"selectorName\" : \"" + selectorName + "\"}\n";
+	string output = "{\"messageType\": \"" + messageType + "\", \"cellName\": \"" + cellName + "\", \"selector\": \"" + std::to_string(selector) + "\", \"selectorName\": \"" + selectorName + "\"}\n";
 	return output;
 }
 
@@ -566,7 +566,7 @@ string spreadsheet::serialize_cell_selected(string messageType, string cellName,
  */
 string spreadsheet::serialize_disconnected(string messageType, int user)
 {
-	string output = "{\"messageType\" : \"" + messageType + "\", \"user\" : \"" + std::to_string(user) + "\"}\n";
+	string output = "{\"messageType\": \"" + messageType + "\", \"user\": \"" + std::to_string(user) + "\"}\n";
 	return output;
 }
 
@@ -575,7 +575,7 @@ string spreadsheet::serialize_disconnected(string messageType, int user)
  */
 string spreadsheet::serialize_invalid_request(string messageType, string cellName, string message)
 {
-	string output = "{\"messageType\" : \"" + messageType + "\", \"cellName\" : \"" + cellName + "\", \"message\" : \"" + message + "\"}\n";
+	string output = "{\"messageType\": \"" + messageType + "\", \"cellName\": \"" + cellName + "\", \"message\": \"" + message + "\"}\n";
 	return output;
 }
 
@@ -584,7 +584,7 @@ string spreadsheet::serialize_invalid_request(string messageType, string cellNam
  */
 string spreadsheet::serialize_server_shutdown(string messageType, string message)
 {
-	string output = "{\"messageType\" : \"" + messageType + "\", \"message\" : \"" + message + "\"}\n";
+	string output = "{\"messageType\": \"" + messageType + "\", \"message\": \"" + message + "\"}\n";
 	return output;
 }
 
