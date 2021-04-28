@@ -64,8 +64,8 @@ def receiveData(s, terminator, terminatorSize, maxTime):
 
 #run the given number of tests on a server at the given ip address.
 def main(test_number, ip_address):
-    print("hello world")
-    return -1
+    print("hello world\n")
+    return 0
 
 #test a correct handshake over spreadsheetSocket s, ensure that the proper data is sent back by server
 #this method creates a new spreadsheet during the handshake.
