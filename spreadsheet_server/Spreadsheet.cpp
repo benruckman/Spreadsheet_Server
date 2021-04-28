@@ -349,11 +349,11 @@ string spreadsheet::undo()
  */
 void spreadsheet::save()
 {
-	ofstream f;
-
 	//string file_name = "../../spreadsheet_data/" + spreadsheet_name + ".txt";
 	string file_name = spreadsheet_name + ".txt";
+
 	//needs to pass in a c string to open the file
+	ofstream f;
 	f.open(file_name.c_str());
 
 	//iterate through the nonempty cell and write them to a text file
