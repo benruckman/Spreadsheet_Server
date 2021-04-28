@@ -153,7 +153,6 @@ vector<string> spreadsheet::get_names_of_all_non_empty_cells()
 	return cells;
 }
 
-
 /*
  * TODO: Document
  */
@@ -170,7 +169,7 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 		if (content[0] == '=') // this is a formula
 		{
 			vector<string> var = get_variables(content);
-			if(creates_circular_dependency(name, var)){
+			if (creates_circular_dependency(name, var)) {
 				return false;
 			}
 			set<string> newDependents;
@@ -180,7 +179,6 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 			}
 			get_dependency_graph().replaceDependents(name, newDependents);
 		}
-
 		if (!undo)
 		{
 			c->cell_contents.push(content);
@@ -189,17 +187,17 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 			e.name = name;
 			e.contents = content;
 			history_real.push(e);
+			std::cout << "PUSH TO HISTORY: " << e.name << " " << e.contents << std::endl;
 		}
 		non_empty_cells[name] = *c;
 		return true;
 	}
 	else
 	{
-
 		if (content[0] == '=') // this is a formula
 		{
 			vector<string> var = get_variables(content);
-			if(creates_circular_dependency(name, var)){
+			if (creates_circular_dependency(name, var)) {
 				return false;
 			}
 			for (int i = 0; i < var.size(); i++)
@@ -215,8 +213,7 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 		e.name = name;
 		e.contents = content;
 		history_real.push(e);
-		spreadsheet_history.push(name);
-
+		std::cout << "PUSH TO HISTORY: " << e.name << " " << e.contents << std::endl;
 		return true;
 	}
 }
@@ -226,14 +223,14 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 * Checks that if these vars were to belong in some formula in the cell with name, they do not cause a circular dependency.
 * Returns true if a circular dependency is caused, false if not.
 */
-bool spreadsheet::creates_circular_dependency(const string name, const vector<string> &vars){
-	for(int i = 0; i < vars.size(); i++){
-		if(get_dependency_graph().hasDependents(vars[i])){
+bool spreadsheet::creates_circular_dependency(const string name, const vector<string>& vars) {
+	for (int i = 0; i < vars.size(); i++) {
+		if (get_dependency_graph().hasDependents(vars[i])) {
 			set<string> var_dependents = get_dependency_graph().getDependents(vars[i]);
-    		for (set<string>::iterator i = var_dependents.begin(); i != var_dependents.end(); i++) {
-    			if(*i == name){
-    				return true;
-    			}
+			for (set<string>::iterator i = var_dependents.begin(); i != var_dependents.end(); i++) {
+				if (*i == name) {
+					return true;
+				}
 			}
 		}
 	}
@@ -292,19 +289,26 @@ string spreadsheet::revert_cell(string selectedCell)
 		{
 			string old = c->cell_contents.top();
 			c->cell_contents.pop();
-			string new = c->cell_contents.top();
-
+			c->current_reverts.push(old);
 			if (c->cell_contents.empty())
 			{
-				c->cell_contents.push("");
-				set_contents_of_cell(selectedCell, "", false);
+				// destroy dependencies
+				edit e;
+				e.name = selectedCell;
+				e.contents = "";
+				history_real.push(e);
+				//non_empty_cells.erase(selectedCell);
 				return ret;
 			}
 			else
 			{
-				string newc = c->cell_contents.top();
-				ret = selectedCell + " " + newc;
-				set_contents_of_cell(selectedCell, newc, false);
+				// check for dependencies
+				string neww = c->cell_contents.top();
+				edit e;
+				e.name = selectedCell;
+				e.contents = neww;
+				history_real.push(e);
+				ret = selectedCell + " " + neww;
 				return ret;
 			}
 		}
@@ -313,7 +317,6 @@ string spreadsheet::revert_cell(string selectedCell)
 	{
 		ret = "";
 	}
-	std::cout << ret << " was returned " << std::endl;
 	return ret;
 }
 
@@ -321,6 +324,7 @@ string spreadsheet::undo()
 {
 	if (!history_real.empty())
 	{
+
 		edit e = history_real.top();
 		string last = e.name;
 		auto it = non_empty_cells.find(last);
@@ -328,32 +332,66 @@ string spreadsheet::undo()
 		if (it != non_empty_cells.end())
 		{
 			cell* c = &it->second;
-			if (c->cell_contents.empty())
+			if (!c->current_reverts.empty())
 			{
+				string s = c->current_reverts.top();
+				c->current_reverts.pop();
+				c->cell_contents.push(s);
+				ret = e.name + " " + c->cell_contents.top();
 			}
-			else
+			else if (!c->cell_contents.empty())
 			{
 				c->cell_contents.pop();
-				if (c->cell_contents.empty())
-				{
-	
-				}
-				else
-				{
-					string newc = c->cell_contents.top();
-					set_contents_of_cell(last, newc, true);
-					ret = last + " " + newc;
-				}
+				ret = e.name + " " + c->cell_contents.top();
 			}
-		}
-		else
-		{
+
 		}
 		history_real.pop();
 		return ret;
 	}
 	return "";
 }
+
+//string spreadsheet::undo()
+//{
+//	std::cout << "undo" << std::endl;
+//	if (!history_real.empty())
+//	{
+//		std::cout << "top :" << history_real.top().name << " " <<history_real.top().contents<< std::endl;
+//		edit e = history_real.top();
+//		string last = e.name;
+//		auto it = non_empty_cells.find(last);
+//		string ret = last + " ";
+//		if (it != non_empty_cells.end())
+//		{
+//			cell* c = &it->second;
+//			if (c->cell_contents.empty())
+//			{
+//			}
+//			else
+//			{
+//				c->cell_contents.pop();
+//				if (c->cell_contents.empty())
+//				{
+//
+//				}
+//				else
+//				{
+//					string newc = c->cell_contents.top();
+//					set_contents_of_cell(last, newc, true);
+//					ret = last + " " + newc;
+//				}
+//			}
+//		}
+//		else
+//		{
+//		}
+//		history_real.pop();
+//		return ret;
+//	}
+//	return "";
+//}
+
 
 /*
  * TODO: Document
@@ -436,15 +474,10 @@ bool spreadsheet::process_messages()
 		string message;
 		if (m.type == "editCell")
 		{
-			message = serialize_cell_update("cellUpdated", m.name, m.contents);
-			if(!set_contents_of_cell(m.name, m.contents, false)){
+			if (!set_contents_of_cell(m.name, m.contents, false))
 				message = serialize_invalid_request("requestError", m.name, "Circular dependency created.");
-				int n = message.length();
-				char mess[n + 1];
-				strcpy(mess, message.c_str());
-				send(m.sender->get_id(), mess, strlen(mess), 0);
-				return true;
-			}
+			else
+				message = serialize_cell_update("cellUpdated", m.name, m.contents);
 		}
 		else if (m.type == "selectCell")
 		{
@@ -459,6 +492,7 @@ bool spreadsheet::process_messages()
 				size_t last_index = line.find_first_of(" ");
 				std::string cell_name = line.substr(0, last_index);
 				std::string cell_contents = line.substr(cell_name.length() + 1);
+				std::cout << line << std::endl;
 				message = serialize_cell_update("cellUpdated", cell_name, cell_contents);
 			}
 		}

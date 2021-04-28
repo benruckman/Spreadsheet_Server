@@ -25,6 +25,7 @@ class spreadsheet
   {
     string cell_name;
     std::stack<string> cell_contents;
+    std::stack<string> current_reverts;
   };
 
   struct message
