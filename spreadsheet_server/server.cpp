@@ -14,6 +14,7 @@
 #include <vector>
 #include <unordered_map>
 #include <iostream>
+#include <sstream>
 #include <dirent.h>
 #include <sys/types.h>
 #include <signal.h>
@@ -319,6 +320,7 @@ void* handle_connection(void* sd)
 				spreadsheet s(ssname);
 				s.add_user(u);
 				spreads[ssname] = s;
+		
 				std::cout << "Added user " << name << " to new spreadsheet " << ssname << " with ID " << i << std::endl;
 			}
 			else
@@ -336,6 +338,15 @@ void* handle_connection(void* sd)
 				strcpy(message, s.c_str());
 				send(newfd, message, strlen(message), 0);*/
 			}
+			
+			// Send the user their id
+			std::stringstream ss;
+			ss << newfd << "\n";
+			int length = ss.str().length();
+			char message[length + 1];
+			strcpy(message, ss.str().c_str());
+			send(newfd, message, strlen(message), 0);
+			
 			pthread_mutex_unlock(&mutexsheets);
 			break;
 		}
