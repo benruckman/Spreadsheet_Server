@@ -557,7 +557,7 @@ string spreadsheet::serialize_cell_update(string messageType, string cellName, s
  */
 string spreadsheet::serialize_cell_selected(string messageType, string cellName, int selector, string selectorName)
 {
-	string output = "{\"messageType\": \"" + messageType + "\", \"cellName\": \"" + cellName + "\", \"selector\": \"" + std::to_string(selector) + "\", \"selectorName\": \"" + selectorName + "\"}\n";
+	string output = "{\"messageType\": \"" + messageType + "\", \"cellName\": \"" + cellName + "\", \"selector\":"  + std::to_string(selector) + ", \"selectorName\": \"" + selectorName + "\"}\n";
 	return output;
 }
 
@@ -566,7 +566,7 @@ string spreadsheet::serialize_cell_selected(string messageType, string cellName,
  */
 string spreadsheet::serialize_disconnected(string messageType, int user)
 {
-	string output = "{\"messageType\": \"" + messageType + "\", \"user\": \"" + std::to_string(user) + "\"}\n";
+	string output = "{\"messageType\": \"" + messageType + "\", \"user\": " + std::to_string(user) + "}\n";
 	return output;
 }
 
