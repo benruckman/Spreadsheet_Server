@@ -54,7 +54,7 @@ class spreadsheet
     // Keeps track of all the changes that has been made to the cell
     std::stack<string> spreadsheet_history;
 
-    std::stack<edit> history_real;
+    std::stack<edit>* history_real;
     
     map<string, queue<string>> cell_history;    
 
