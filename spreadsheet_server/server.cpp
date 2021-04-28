@@ -341,7 +341,7 @@ void* handle_connection(void* sd)
 			
 			// Send the user their id
 			std::stringstream ss;
-			ss << newfd << "\n";
+			ss << u->get_id() << "\n";
 			int length = ss.str().length();
 			char message[length + 1];
 			strcpy(message, ss.str().c_str());
