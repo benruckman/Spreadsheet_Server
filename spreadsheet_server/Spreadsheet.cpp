@@ -38,14 +38,12 @@ spreadsheet::spreadsheet(string name)
 	this->non_empty_cells = cells;
 	map<string, queue<string>> cellHistory;
 	this->cell_history = cellHistory;
-	std::stack<string> history;
-	this->spreadsheet_history = history;
 	queue<message> messages;
 	this->message_queue = messages;
 	vector<user> users;
 	this->user_list = users;
 	open_spreadsheet(name);
-	stack<edit> history_real;
+	stack<edit>* history_real = new stack<edit>;
 	this->history_real = history_real;
 }
 
@@ -186,8 +184,9 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 			edit e;
 			e.name = name;
 			e.contents = content;
-			history_real.push(e);
-			std::cout << "PUSH TO HISTORY: " << e.name << " " << e.contents << std::endl;
+			this->history_real->push(e);
+			std::cout << history_real->top().contents << std::endl;
+			std::cout << "PUSH TO HISTORY: " << e.name << " " << e.contents << " SIZE: " << history_real->size() << std::endl;
 		}
 		non_empty_cells[name] = *c;
 		return true;
@@ -212,8 +211,9 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 		edit e;
 		e.name = name;
 		e.contents = content;
-		history_real.push(e);
-		std::cout << "PUSH TO HISTORY: " << e.name << " " << e.contents << std::endl;
+		this->history_real->push(e);
+		std::cout << history_real->top().contents << std::endl;
+		std::cout << "PUSH TO HISTORY: " << e.name << " " << e.contents <<  " SIZE: " << history_real->size() <<std::endl;
 		return true;
 	}
 }
@@ -296,7 +296,7 @@ string spreadsheet::revert_cell(string selectedCell)
 				edit e;
 				e.name = selectedCell;
 				e.contents = "";
-				history_real.push(e);
+				this->history_real->push(e);
 				//non_empty_cells.erase(selectedCell);
 				return ret;
 			}
@@ -307,7 +307,7 @@ string spreadsheet::revert_cell(string selectedCell)
 				edit e;
 				e.name = selectedCell;
 				e.contents = neww;
-				history_real.push(e);
+				this->history_real->push(e);
 				ret = selectedCell + " " + neww;
 				return ret;
 			}
@@ -322,10 +322,10 @@ string spreadsheet::revert_cell(string selectedCell)
 
 string spreadsheet::undo()
 {
-	if (!history_real.empty())
+	if (!history_real->empty())
 	{
 
-		edit e = history_real.top();
+		edit e = history_real->top();
 		string last = e.name;
 		auto it = non_empty_cells.find(last);
 		string ret = last + " ";
@@ -346,7 +346,7 @@ string spreadsheet::undo()
 			}
 
 		}
-		history_real.pop();
+		history_real->pop();
 		return ret;
 	}
 	return "";
@@ -398,33 +398,26 @@ string spreadsheet::undo()
  */
 void spreadsheet::save()
 {
-<<<<<<< HEAD
-	ofstream f;
+	
 
 	string file_name = "./../spreadsheet_data/" + spreadsheet_name + ".txt";
 	//string file_name =  spreadsheet_name + ".txt";
-=======
-	//string file_name = "../../spreadsheet_data/" + spreadsheet_name + ".txt";
-	string file_name = spreadsheet_name + ".txt";
 
->>>>>>> main
-	//needs to pass in a c string to open the file
-	ofstream f;
-	f.open(file_name.c_str());
-
+	ofstream f(file_name);
 	//iterate through the nonempty cell and write them to a text file
 	stack<edit> reverse_history;
-	while (!history_real.empty())
+	while (!this->history_real->empty())
 	{
 		//it->first is the cell name in the map, it->second is the contents of the cell in the map
-		edit e = history_real.top();
+		edit e = this->history_real->top();
 		reverse_history.push(e);
-		history_real.pop();
+		this->history_real->pop();
 	}
 	while (!reverse_history.empty())
 	{
 		edit e = reverse_history.top();
 		string cells = e.name + " " + e.contents + "\n";
+		std::cout << "saving cell: " << cells << std::endl;
 		f << cells;
 		reverse_history.pop();
 	}
@@ -449,8 +442,11 @@ void spreadsheet::open_spreadsheet(string file_name)
 		size_t last_index = line.find_first_of(" ");
 		cell_name = line.substr(0, last_index);
 		cell_contents = line.substr(cell_name.length() + 1);
-		set_contents_of_cell(cell_name, cell_contents, false);
+		if (set_contents_of_cell(cell_name, cell_contents, false))
+			std::cout << "true" << std::endl;
+		
 	}
+	file.close();
 }
 
 /*
@@ -631,11 +627,7 @@ string spreadsheet::serialize_cell_selected(string messageType, string cellName,
  */
 string spreadsheet::serialize_disconnected(string messageType, int user)
 {
-<<<<<<< HEAD
-	string output = "{\"messageType\" : \"" + messageType + "\", \"user\" :" + std::to_string(user) + "}\n";
-=======
 	string output = "{\"messageType\": \"" + messageType + "\", \"user\": " + std::to_string(user) + "}\n";
->>>>>>> main
 	return output;
 }
 

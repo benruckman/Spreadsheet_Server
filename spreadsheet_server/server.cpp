@@ -43,7 +43,7 @@ const int MAX_CLIENTS = 200;
 user clients[MAX_CLIENTS];
 
 // the set of spreadsheets
-std::unordered_map<string, spreadsheet> spreads;
+std::unordered_map<string, spreadsheet*> spreads;
 
 // the main entry point of our application
 int main(int argc, char* argv[])
@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
 
 			if (extension == ".txt")
 			{
-				spreadsheet new_sheet(raw_name);
+				spreadsheet* new_sheet = new spreadsheet(raw_name);
 				spreads[raw_name] = new_sheet;
 			}
 		}
@@ -199,7 +199,7 @@ int main(int argc, char* argv[])
 							std::cout << "Error: removing client from nonexistant spreadsheet" << std::endl;
 						else
 						{
-							spreadsheet* s = &it->second;
+							spreadsheet* s = it->second;
 							s->remove_user(cli->get_id());
 							s->send_disconnect(cli->get_id());
 						}
@@ -222,7 +222,7 @@ int main(int argc, char* argv[])
 						cli->clear_buffer();
 						pthread_mutex_lock(&mutexsheets);
 						auto it = spreads.find(cli->get_ssname());
-						spreadsheet* s = &it->second;
+						spreadsheet* s = it->second;
 						s->add_message(message, cli->get_id());
 						pthread_mutex_unlock(&mutexsheets);
 					}
@@ -317,15 +317,15 @@ void* handle_connection(void* sd)
 			auto it = spreads.find(ssname);
 			if (it == spreads.end())
 			{
-				spreadsheet s(ssname);
-				s.add_user(u);
+				spreadsheet* s = new spreadsheet(ssname);
+				s->add_user(u);
 				spreads[ssname] = s;
 		
 				std::cout << "Added user " << name << " to new spreadsheet " << ssname << " with ID " << i << std::endl;
 			}
 			else
 			{
-				spreadsheet* s = &it->second;
+				spreadsheet* s = it->second;
 				std::cout << "Added user " << name << " to existing spreadsheet " << ssname << " with ID " << i << std::endl;
 				// send user state of spreadsheet
 				s->send_spreadsheet(u->get_socket());
@@ -369,7 +369,7 @@ void* update_spreadsheets(void* sd)
 			{
 				string key = it.first;
 				auto value = spreads.find(key);
-				spreadsheet* s = &value->second;
+				spreadsheet* s = value->second;
 				s->process_messages();
 			}
 		}
@@ -390,6 +390,9 @@ void shut_down(int sigint)
 {
 	std::cout << "SHUTTING DOWN" << std::endl;
 	// add a new user to map of sockets, and to list of spreadsheets
+
+	
+
 	pthread_mutex_lock(&mutex);
 	for (int i = 0; i < MAX_CLIENTS - 1; i++)
 	{
@@ -410,10 +413,13 @@ void shut_down(int sigint)
 	{
 		string key = it.first;
 		auto value = spreads.find(key);
-		spreadsheet* s = &value->second;
+		spreadsheet* s = value->second;
 		s->save();
+		std::cout << "SAVED" << std::endl;
 	}
 	pthread_mutex_unlock(&mutexsheets);
+
+	
 
 	exit(sigint);
 }
