@@ -373,7 +373,7 @@ string spreadsheet::undo()
 void spreadsheet::save()
 {
 	// TODO: ABSOLUTE FILE NAME
-	string file_name = "./../spreadsheet_data/" + spreadsheet_name + ".txt";
+	string file_name = "/spreadsheet_data/" + spreadsheet_name + ".sprd";
 	//string file_name =  spreadsheet_name + ".txt";
 
 	ofstream f(file_name);
@@ -404,7 +404,7 @@ void spreadsheet::save()
  */
 void spreadsheet::open_spreadsheet(string file_name)
 {
-	string sheet_name = "./../spreadsheet_data/" + file_name + ".txt";
+	string sheet_name = "/spreadsheet_data/" + file_name + ".sprd";
 	ifstream f;
 	string cell_name = "";
 	string cell_contents = "";

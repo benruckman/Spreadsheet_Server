@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
 
 	// Get the files of all the spreadsheets we can read
 	struct dirent* files;
-	DIR* directory = opendir("./../spreadsheet_data/");
+	DIR* directory = opendir("/spreadsheet_data/");
 
 	// Try to open spreadsheet files inside directory
 	string full_name = "";
@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
 			size_t last_index = full_name.find_last_of(".");
 			string raw_name = full_name.substr(0, last_index);
 			string extension = full_name.substr(raw_name.length());
-			if (extension == ".txt")
+			if (extension == ".sprd")
 			{
 				// Create a new spreadsheet from file, and add it to our set
 				spreadsheet* new_sheet = new spreadsheet(raw_name);
