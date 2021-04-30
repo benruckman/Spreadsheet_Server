@@ -1,3 +1,7 @@
+// A server that hosts a spreadsheet
+// Authors: Jackson McKay, John Richard
+// Date:    4/30/21
+
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,47 +25,54 @@
 #include "spreadsheet.h"
 #include "user.h"
 
+// Definitions of constants needed to run
 #define TRUE 1
-#define PORT 1100
+#define PORT 1100 
 #define BUFFER_SIZE 1024
 
-// method forwarding
+// Method forwarding
 void* handle_connection(void* sd);
 void* update_spreadsheets(void* sd);
 int error_exit(std::string err);
 void shut_down(int sigint);
 
-// used to lock critical sections of code, mainly clients[].
+// Locks to ensure critical sections of code remain intact
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-// used to lock critical sections of code, spreads
 pthread_mutex_t mutexsheets = PTHREAD_MUTEX_INITIALIZER;
 
-// max numbe of clients our server can handle
+// Max numbe of clients our server can handle
 const int MAX_CLIENTS = 200;
 
-// array of all client clients, let us start wit
+// Array of all connected clients
 user clients[MAX_CLIENTS];
 
-// the set of spreadsheets
+// The set of spreadsheets we currently have open
 std::unordered_map<string, spreadsheet*> spreads;
 
-// the set of all handsh
-
-// the id of the update thread, so we may kill it later
+// the id of the thread that processes and sends updates, stored so we can kill it upon program termination
 pthread_t updatethread;
 
-// the main entry point of our application
+/* The main entry point of our spreadsheet server, continually reads network traffic on port 1100
+ *		And handles it accordingly
+ * 
+ * Returns: an integer representing the exit status of the program
+ * 
+ * Parameters: Commmand line arguments, none of which are used. 
+ */
 int main(int argc, char* argv[])
 {
-	//Register signal
+	// Register shut down signal to shut_down(), so we can clean up before the application closes
 	signal(SIGINT, shut_down);
+	// The master socket, where data flows into
+	int master_socket; 	
+	// The set of all sockets that have data waiting to be read		
+	fd_set readfds; 			
 
-	int master_socket; 			// our master socket, where data flows into
-	fd_set readfds; 			// the set of all reading sockets
-
+	// Get the files of all the spreadsheets we can read
 	struct dirent* files;
 	DIR* directory = opendir("./../spreadsheet_data/");
 
+	// Try to open spreadsheet files inside directory
 	string full_name = "";
 	if (directory != NULL)
 	{
@@ -70,11 +81,10 @@ int main(int argc, char* argv[])
 			full_name = files->d_name;
 			size_t last_index = full_name.find_last_of(".");
 			string raw_name = full_name.substr(0, last_index);
-
 			string extension = full_name.substr(raw_name.length());
-
 			if (extension == ".txt")
 			{
+				// Create a new spreadsheet from file, and add it to our set
 				spreadsheet* new_sheet = new spreadsheet(raw_name);
 				spreads[raw_name] = new_sheet;
 			}
@@ -82,63 +92,60 @@ int main(int argc, char* argv[])
 	}
 	closedir(directory);
 
-	// a testing message
-	char* message = "{\"messageType\" : \"cellUpdated\", \"cellName\" : \"a1\", \"contents\" : \"=1 + 3\"}\n";
-
-	// initialize all client_socket[] with empty users
+	// Initialize all spots in clients[] to have empty users
 	for (int i = 0; i < MAX_CLIENTS; i++)
 	{
 		user u;
 		clients[i] = u;
 	}
 
-	// create a master socket (i.e. the listener)
+	// Create a master socket (i.e. the listener)
 	if ((master_socket = socket(AF_INET, SOCK_STREAM, 0)) == 0)
 		return error_exit("Error creating socket");
 
 	int option = 1;
-	// set master socket to allow multiple connections 
+	// Set master socket to allow multiple connections 
 	if (setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, (char*)&option, sizeof(option)) < 0)
 		return error_exit("Error setting socket options");
 
-	// our address for our socket to bind to 
+	// Our address for our socket to bind to 
 	struct sockaddr_in address;
 	address.sin_family = AF_INET;
 	address.sin_addr.s_addr = INADDR_ANY;
 	address.sin_port = htons(PORT);
 
-	// bind the socket to localhost port 1100
+	// Bind the socket to localhost port 1100
 	if (bind(master_socket, (struct sockaddr*)&address, sizeof(address)) < 0)
 		return error_exit("Error binding socket");
 
-	// try to specify maximum of 5 pending connections for the master socket
+	// Try to specify maximum of 5 pending connections for the master socket
 	if (listen(master_socket, 5) < 0)
 		return error_exit("Error setting up listener on master socket");
 
 	std::cout << "Waiting for connections..." << std::endl;
 
-	// thread to constantly update spreadsheets
+	// Create and launch the thread that will process updates 
 	pthread_create(&updatethread, NULL, update_spreadsheets, NULL);
 	pthread_detach(updatethread);
-	// REMEMEBER TO KILL ME WHEN MAIN ENDS
 
+	// Start our loop that will accept new connections, and read data from those connections
 	while (TRUE)
 	{
-		// clear the socket set of current reads
+		// Clear the socket set of current reads
 		FD_ZERO(&readfds);
 
-		// add master socket to set, so we know of any pending connections
+		// Add master socket to set, so we know of any pending connections
 		FD_SET(master_socket, &readfds);
 
-		// create a timeout for select
+		// Create a timeout for select, so it doesn't block if there is nothing to be read
 		timeval timeout;
 		timeout.tv_sec = 0;
 		timeout.tv_usec = 50;
 
-		// update the size accordingly
+		// Keep track of the number of sockets we have
 		int max_sd = master_socket;
 
-		// add additional sockets to set
+		// Add additional sockets to the set, if they are valid connections
 		for (int i = 0; i < MAX_CLIENTS - 1; i++)
 		{
 			pthread_mutex_lock(&mutex);
@@ -150,7 +157,7 @@ int main(int argc, char* argv[])
 				max_sd = sd;
 		}
 
-		// wait and see if there is any activity on our reading sockets
+		// Wait and see if there is any activity on our reading sockets
 		int activity = select(max_sd + 1, &readfds, NULL, NULL, &timeout);
 		if ((activity < 0) && (errno != EINTR))
 			std::cout << "Error in select();" << std::endl;
@@ -158,45 +165,44 @@ int main(int argc, char* argv[])
 			continue;
 		else
 		{
-
-			// if something happened on the master socket, it is a new connection
+			// If something happened on the master socket, it is a new connection
 			if (FD_ISSET(master_socket, &readfds))
 			{
-				// accept the incoming connection
+				// Accept the incoming connection
 				int addrlen = sizeof(address);
 				int new_socket;
 				if ((new_socket = accept(master_socket, (struct sockaddr*)&address, (socklen_t*)&addrlen)) < 0)
 					std::cout << "Error accepting new connection" << std::endl;
 				else
 				{
-					// create a new thread to handle the handshake, and launch
+					// Create a new thread to handle the handshake, and launch
 					pthread_t pid;
 					if (pthread_create(&pid, NULL, handle_connection, (void*)&new_socket) != 0)
 						std::cout << "Handshake Failure" << std::endl;
-					// detach the thread
 					pthread_detach(pid);
 				}
 			}
 
-			// else its some IO operation on some other socket
+			// Else its some IO operation on some other socket, like a read 
 			for (int i = 0; i < MAX_CLIENTS - 1; i++)
 			{
-				// 
+				// Get a client we will check
 				pthread_mutex_lock(&mutex);
 				int sd = clients[i].get_socket();
 				user* cli = &clients[i];
 				pthread_mutex_unlock(&mutex);
 
+				// If this client has data that needs to be read
 				if (FD_ISSET(sd, &readfds))
 				{
 					// Check if it was for closing 
 					int valread;
 					if ((valread = read(sd, cli->get_buffer(), 1024)) <= 0)
 					{
-						// a client disconnected, print info
+						// A client disconnected, print info
 						std::cout << "User " << cli->get_username() << " disconnected from spreadsheet " << cli->get_ssname() << std::endl;
 
-						// remove the user from the spreadsheet they were on
+						// Remove the user from the spreadsheet they were on, and send a disconnect message to other users
 						pthread_mutex_lock(&mutexsheets);
 						auto it = spreads.find(cli->get_ssname());
 						if (it == spreads.end())
@@ -215,14 +221,12 @@ int main(int argc, char* argv[])
 						user u;
 						clients[i] = u;
 						pthread_mutex_unlock(&mutex);
-
-						//
-
 					}
-					// a message came in, print it
+
+					// Else it is a message that has come in that needs to be processed
 					else
 					{
-
+						// Get the message, and parse it
 						std::string message = cli->get_buffer();
 						cli->clear_buffer();
 						pthread_mutex_lock(&mutexsheets);
@@ -236,11 +240,10 @@ int main(int argc, char* argv[])
 						while ((pos = data->find(delimiter)) != std::string::npos) 
 						{
     						token = data->substr(0, pos);
-    						std::cout <<"token: " << token << std::endl;
     						cli->remove_data(0, data->find(delimiter) + delimiter.length());
-							//data.erase(0, data.find(delimiter) + delimiter.length());
 							if(token.size() > 1)
 							{
+								// If we have a valid message, add it to the queue of things to be processed
 								s->add_message(token, cli->get_id());
 							}
 						}
@@ -251,20 +254,23 @@ int main(int argc, char* argv[])
 			}
 		}
 	}
-
 	return 0;
 }
 
-// handles the handshake process 
+/* Handles the handshake process when a new client tries to connect
+ * 		
+ * Returns: Nothing
+ * 
+ * Parameters: The socket on which the client is connecting from 
+ */
 void* handle_connection(void* sd)
 {
 	int newfd = *(int*)sd;
 	char buf[BUFFER_SIZE];
 	int nbytes;
-
 	bzero(buf, BUFFER_SIZE);
 
-	// read the first thing from the client, the username
+	// Read the first thing from the client, should be their username
 	nbytes = read(newfd, buf, BUFFER_SIZE);
 	if (nbytes < 0)
 	{
@@ -278,15 +284,16 @@ void* handle_connection(void* sd)
 	}
 	std::string name = std::string(buf);
 	name.erase(name.end() - 1);
-
-	// clear our buffer out
 	bzero(buf, BUFFER_SIZE);
 
-	// send the client the list of possible spreadsheets
+	// Send the client the list of possible spreadsheets to edit
 	pthread_mutex_lock(&mutexsheets);
 	if (spreads.empty())
 	{
-		char* message = "\n\n";
+		std::string s = "\n\n";
+		int n = s.length();
+		char message[n + 1];
+		strcpy(message, s.c_str());
 		send(newfd, message, strlen(message), 0);
 	}
 	else
@@ -306,7 +313,7 @@ void* handle_connection(void* sd)
 	pthread_mutex_unlock(&mutexsheets);
 
 
-	// read the name of the spreadsheet the client wishes to edit
+	// Read the name of the spreadsheet the client wishes to edit
 	nbytes = read(newfd, buf, BUFFER_SIZE);
 	if (nbytes < 0)
 	{
@@ -321,20 +328,20 @@ void* handle_connection(void* sd)
 	std::string ssname = std::string(buf);
 	ssname.erase(ssname.end() - 1);
 
-	// add a new user to map of sockets, and to list of spreadsheets
+	// Add a new user to map of sockets, and spreadsheet to list of spreadsheets
 	pthread_mutex_lock(&mutex);
 	for (int i = 0; i < MAX_CLIENTS - 1; i++)
 	{
 		if (clients[i].get_id() < 0)
 		{
-			// we have a spot for a new user
+			// We have a spot for a new user
 			user* u = new user(i, newfd, name, ssname);
 			clients[i] = *u;
 
 			std::cout << "Created new user " << name << std::endl;
 
 			pthread_mutex_lock(&mutexsheets);
-			// if we do not already have the spreadsheet, make a new one
+			// If we do not already have the spreadsheet, make a new one
 			auto it = spreads.find(ssname);
 			if (it == spreads.end())
 			{
@@ -344,6 +351,7 @@ void* handle_connection(void* sd)
 		
 				std::cout << "Added user " << name << " to new spreadsheet " << ssname << " with ID " << i << std::endl;
 			}
+			// Else they are opening a new one
 			else
 			{
 				spreadsheet* s = it->second;
@@ -352,22 +360,15 @@ void* handle_connection(void* sd)
 				s->send_spreadsheet(u->get_socket());
 				s->send_selections(u->get_socket());
 				s->add_user(u);
-				// send user their ID
-				/*std::string user = std::to_string(selector) + "\n";
-				int n = user.length();
-				char message[n + 1];
-				strcpy(message, s.c_str());
-				send(newfd, message, strlen(message), 0);*/
 			}
 			
-			// Send the user their id
+			// Finally, send user their unique ID
 			std::stringstream ss;
 			ss << u->get_id() << "\n";
 			int length = ss.str().length();
 			char message[length + 1];
 			strcpy(message, ss.str().c_str());
 			send(newfd, message, strlen(message), 0);
-			
 			pthread_mutex_unlock(&mutexsheets);
 			break;
 		}
@@ -377,7 +378,12 @@ void* handle_connection(void* sd)
 	return 0;
 }
 
-// updates spreadsheets
+/* Continually updates the state of spreadsheets based on user requests
+ * 		
+ * Returns: Nothing
+ * 
+ * Parameters: None
+ */
 void* update_spreadsheets(void* sd)
 {
 	while (true)
@@ -385,6 +391,7 @@ void* update_spreadsheets(void* sd)
 		pthread_mutex_lock(&mutexsheets);
 		if (!spreads.empty())
 		{
+			// For every spreadsheet in the list, process pending  messages
 			for (auto it : spreads)
 			{
 				string key = it.first;
@@ -397,7 +404,12 @@ void* update_spreadsheets(void* sd)
 	}
 }
 
-// exits the program printing an error message
+/* Exits the program if an error is encountered
+ * 		
+ * Returns: The error status 
+ * 
+ * Parameters: The error message
+ */
 int error_exit(std::string err)
 {
 	std::cout << err << std::endl;
@@ -405,12 +417,17 @@ int error_exit(std::string err)
 	return -1;
 }
 
-// Cleanly shusts down the server
+/* Cleanly shuts down our server, by saving the state of the spreadsheets
+ * 		
+ * Returns: Nothing
+ * 
+ * Parameters: The exit signal
+ */
 void shut_down(int sigint)
 {
 	std::cout << "Cleaning up" << std::endl;
 
-	// add a new user to map of sockets, and to list of spreadsheets
+	// Send a server closing message to all of our connected clients
 	pthread_mutex_lock(&mutex);
 	for (int i = 0; i < MAX_CLIENTS - 1; i++)
 	{
@@ -427,6 +444,7 @@ void shut_down(int sigint)
 	}
 	pthread_mutex_unlock(&mutex);
 
+	// Save all of the spreadsheets
 	pthread_mutex_lock(&mutexsheets);
 	for (auto it : spreads)
 	{
@@ -437,12 +455,9 @@ void shut_down(int sigint)
 		s->save();
 	}
 	pthread_mutex_unlock(&mutexsheets);
+
+	// Kill the processing thread, and exit the program
 	pthread_cancel(updatethread); 
 	std::cout << "Exiting" << std::endl;
 	exit(0);
 }
-
-
-
-
-
