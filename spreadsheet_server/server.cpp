@@ -408,7 +408,7 @@ int error_exit(std::string err)
 // Cleanly shusts down the server
 void shut_down(int sigint)
 {
-	std::cout << "Cleaning up" << std::endl;
+	std::cout <<"\nCleaning up" << std::endl;
 
 	// add a new user to map of sockets, and to list of spreadsheets
 	pthread_mutex_lock(&mutex);
@@ -428,15 +428,20 @@ void shut_down(int sigint)
 	pthread_mutex_unlock(&mutex);
 
 	pthread_mutex_lock(&mutexsheets);
-	for (auto it : spreads)
+	for (auto sheet_it : spreads)
 	{
-		std::cout << "Saving spreadsheet "<< it.first << std::endl;
-		string key = it.first;
+		std::cout << "Saving spreadsheet "<< sheet_it.first << std::endl;
+		
+		string key = sheet_it.first;
 		auto value = spreads.find(key);
 		spreadsheet* s = value->second;
+		
 		s->save();
+		
+		delete s;
 	}
 	pthread_mutex_unlock(&mutexsheets);
+	
 	pthread_cancel(updatethread); 
 	std::cout << "Exiting" << std::endl;
 	exit(0);

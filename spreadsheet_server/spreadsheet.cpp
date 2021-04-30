@@ -34,16 +34,22 @@ spreadsheet::spreadsheet(string name)
 {
 	// Initialize variables
 	this->spreadsheet_name = name;
+	
 	map <string, cell > cells;
 	this->non_empty_cells = cells;
+	
 	map<string, queue<string>> cellHistory;
 	this->cell_history = cellHistory;
+	
 	queue<message> messages;
 	this->message_queue = messages;
+	
 	vector<user> users;
 	this->user_list = users;
+	
 	stack<edit>* history_real = new stack<edit>;
 	this->history_real = history_real;
+	
 	open_spreadsheet(name);
 }
 
@@ -59,7 +65,14 @@ spreadsheet::spreadsheet()
  */
 spreadsheet::~spreadsheet()
 {
-
+	int num_users = this->user_list.size();
+	
+	for (int i = 0; i < num_users; i++)
+	{
+		delete &user_list[i];
+	}
+	
+	delete history_real;
 }
 
 
@@ -242,6 +255,7 @@ void spreadsheet::add_user(user* new_user)
 	user_list.push_back(*new_user);
 }
 
+
 /*
  * TODO: Document
  */
@@ -257,15 +271,18 @@ void spreadsheet::remove_user(int id)
 	}
 }
 
+
 std::stack<std::string> spreadsheet::get_spreadsheet_history()
 {
 	return this->spreadsheet_history;
 }
 
+
 map<string, queue<string>> spreadsheet::get_cell_history()
 {
 	return this->cell_history;
 }
+
 
 /*
  * TODO: Document
@@ -380,6 +397,7 @@ void spreadsheet::save()
 
 }
 
+
 /*
  * TODO: Document
  */
@@ -402,6 +420,7 @@ void spreadsheet::open_spreadsheet(string file_name)
 	file.close();
 }
 
+
 /*
  * TODO: Document
  */
@@ -416,6 +435,7 @@ string spreadsheet::normalize(string cell_contents)
 
 	return normalized_contents;
 }
+
 
 /*
  * TODO: Document
@@ -479,6 +499,7 @@ bool spreadsheet::process_messages()
 	return true;
 }
 
+
 /*
  *TODO: Document
  */
@@ -509,6 +530,7 @@ vector<string> spreadsheet::get_variables(string contents)
 	}
 	return variables;
 }
+
 
 /*
  *TODO:Document
@@ -555,6 +577,7 @@ void spreadsheet::send_selections(int socket)
 	}
 }
 
+
 /*
  *TODO: Document
  */
@@ -563,6 +586,7 @@ string spreadsheet::serialize_cell_update(string messageType, string cellName, s
 	string output = "{\"messageType\": \"" + messageType + "\", \"cellName\": \"" + cellName + "\", \"contents\": \"" + contents + "\"}\n";
 	return output;
 }
+
 
 /*
  *TODO: Document
@@ -573,6 +597,7 @@ string spreadsheet::serialize_cell_selected(string messageType, string cellName,
 	return output;
 }
 
+
 /*
  *TODO: Document
  */
@@ -581,6 +606,7 @@ string spreadsheet::serialize_disconnected(string messageType, int user)
 	string output = "{\"messageType\": \"" + messageType + "\", \"user\": " + std::to_string(user) + "}\n";
 	return output;
 }
+
 
 /*
  *TODO: Document
@@ -591,6 +617,7 @@ string spreadsheet::serialize_invalid_request(string messageType, string cellNam
 	return output;
 }
 
+
 /*
  *TODO: Document
  */
@@ -599,6 +626,7 @@ string spreadsheet::serialize_server_shutdown(string messageType, string message
 	string output = "{\"messageType\": \"" + messageType + "\", \"message\": \"" + message + "\"}\n";
 	return output;
 }
+
 
 /*
  *TODO: Document
@@ -642,4 +670,3 @@ vector<string> spreadsheet::split(string str, char delimeter)
 	}
 	return splittedStrings;
 }
-
