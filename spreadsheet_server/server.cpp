@@ -197,7 +197,7 @@ int main(int argc, char* argv[])
 				{
 					// Check if it was for closing 
 					int valread;
-					if ((valread = read(sd, cli->get_buffer(), 1024)) <= 0)
+					if ((valread = read(sd, cli->get_buffer() + cli->get_sizeleft(), (1024 - cli->get_sizeleft()))) <= 0)
 					{
 						// A client disconnected, print info
 						std::cout << "User " << cli->get_username() << " disconnected from spreadsheet " << cli->get_ssname() << std::endl;
@@ -226,28 +226,25 @@ int main(int argc, char* argv[])
 					// Else it is a message that has come in that needs to be processed
 					else
 					{
-						// Get the message, and parse it
+						
 						std::string message = cli->get_buffer();
 						cli->clear_buffer();
 						pthread_mutex_lock(&mutexsheets);
 						auto it = spreads.find(cli->get_ssname());
 						spreadsheet* s = it->second;
-						cli->add_data(message);
-						std::string* data = cli->get_data();
 						std::string delimiter = "\n";
 						size_t pos = 0;
 						std::string token;
-						while ((pos = data->find(delimiter)) != std::string::npos) 
+						while ((pos = message.find(delimiter)) != std::string::npos)
 						{
-    						token = data->substr(0, pos);
-    						cli->remove_data(0, data->find(delimiter) + delimiter.length());
-							if(token.size() > 1)
-							{
-								// If we have a valid message, add it to the queue of things to be processed
-								s->add_message(token, cli->get_id());
-							}
+    						token = message.substr(0, pos);
+    						std::cout << token << std::endl;
+    						message.erase(0, pos + delimiter.length());
+							s->add_message(token, cli->get_id());
 						}
-						cli->add_data(*data);
+						int n = message.length();
+    					strcpy(cli->get_buffer(), message.c_str());
+						cli->set_sizeleft(message.length());
 						pthread_mutex_unlock(&mutexsheets);
 					}
 				}

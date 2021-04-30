@@ -6,6 +6,7 @@
 #include "user.h"
 #include <string>
 #include <strings.h>
+#include <iostream>
 
 /* Creates an "invalid" default user
  * 
@@ -17,11 +18,11 @@ user::user()
 {
 	this->id = -1;
 	this->username = "";
-	this->size = 0;
 	this->socket = -1;
 	this->ssname =""; 
 	this->buffer = NULL;	
-  this->data = nullptr;
+  this->data = "";
+  this->sizeleft = 0;
 }
 
 /* Creates an new user
@@ -34,13 +35,13 @@ user::user(int id, int socket, std::string username, std::string ssname)
 {
   this->id = id;
   this->username = username;
-  this->size = 1024;
   this->socket = socket;  
   this->ssname = ssname;
   char buffer[1024];
   this->buffer = buffer;
   this->currcell = "A1";
-  this->data = new std::string();
+  this->data = "";
+  this->sizeleft = 0;
 }
  
 /* Destroys a new user
@@ -51,8 +52,40 @@ user::user(int id, int socket, std::string username, std::string ssname)
  */
 user::~user()
 {
-  if(data != nullptr)
-    free(data);
+
+}
+
+/* Returns size of data not parse from buffer
+ * 
+ * Parameters: None
+ *  
+ * Returns: size of data not parse
+ */
+int user::get_sizeleft()
+{
+  return this->sizeleft;
+}
+
+/* Sets size of data not read from buffer
+ * 
+ * Parameters: size of data not read
+ *  
+ * Returns: Nothing
+ */
+void user::set_sizeleft(int s)
+{
+  this->sizeleft = s;
+}
+
+/* Sets our buffer to a new one
+ * 
+ * Parameters: our char array to copy from
+ *  
+ * Returns: nothing
+ */
+void user::set_buffer(char c[])
+{
+  this->buffer = c;
 }
 
 /* Returns spreadsheet this user is editing
@@ -143,36 +176,5 @@ void user::clear_buffer()
   bzero(this->buffer, 1024);
 }
 
-/* Returns this users unprocessed data
- * 
- * Parameters: None
- *  
- * Returns: string pointer of unprocessed data
- */
-std::string* user::get_data()
-{
-  return this->data;
-}
 
-/* Adds a message to be processsed to data
- * 
- * Parameters: message to be processed
- *  
- * Returns: Nothing
- */
-void user::add_data(std::string data)
-{
-  this->data->append(data);
-}
-
-/* Removes a message from data, at start to length
- * 
- * Parameters: index to start remove, lenght of remove
- *  
- * Returns: Nothing
- */
-void user::remove_data(int start, int length)
-{
-   this->data->erase(start, length);
-}
         
