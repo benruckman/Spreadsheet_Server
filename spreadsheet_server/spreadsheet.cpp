@@ -41,9 +41,6 @@ spreadsheet::spreadsheet(string name)
 	map <string, cell > cells;
 	this->non_empty_cells = cells;
 
-	map<string, queue<string>> cellHistory;
-	this->cell_history = cellHistory;
-
 	queue<message> messages;
 	this->message_queue = messages;
 	
@@ -287,18 +284,6 @@ void spreadsheet::remove_user(int id)
 			break; 
 		}
 	}
-}
-
-
-std::stack<std::string> spreadsheet::get_spreadsheet_history()
-{
-	return this->spreadsheet_history;
-}
-
-
-map<string, queue<string>> spreadsheet::get_cell_history()
-{
-	return this->cell_history;
 }
 
 
