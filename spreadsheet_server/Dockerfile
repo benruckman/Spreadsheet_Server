@@ -8,11 +8,9 @@
 # docker build --tag myubuntu  .
 # 
 # (Don't forget the trailing . to specify that this directory is the context.)
-
 FROM ubuntu
 
 # Set a default shell.
-
 SHELL ["/bin/bash", "-c"]
 
 # The timezone library stops the docker build and waits for user input to
@@ -21,20 +19,18 @@ SHELL ["/bin/bash", "-c"]
 # This Docker code does that. Composited from two sources:
 # https://rtfm.co.ua/en/docker-configure-tzdata-and-timezone-during-build/
 # https://serverfault.com/questions/949991/how-to-install-tzdata-on-a-ubuntu-docker-image
-
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ="America/Salt Lake City"
+
+# Copy the source code into a the image under a directory called "server".
+COPY . /server
 
 # Install a handful of useful libraries.  Note that this is generally against
 # best practices -- containers should be lean, and not include 'things you
 # might use'.  In our case, we're using the containers for development, so
 # this may be reasonable temporarily.
-
 RUN apt-get -y update && apt-get -y install \
    g++
    
-   
-
-COPY . .
-
+# Compile the source code into an application called "spreadsheet_server".
 RUN g++ -std=c++11 -pthread spreadsheet.cpp server.cpp user.cpp DependencyGraph.cpp -o spreadsheet_server
