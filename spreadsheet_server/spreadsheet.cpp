@@ -168,6 +168,7 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 		{
 			vector<string> var = get_variables(content);
 			if (creates_circular_dependency(name, var)) {
+			  std::cout<<"Circular dependency caught"<<std::endl;
 				return false;
 			}
 			set<string> newDependents;
@@ -199,6 +200,7 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 			  std::cout<<"Variables in the content : "<<var[i]<<std::endl;
 			}
 			if (creates_circular_dependency(name, var)) {
+			  std::cout<<"Circular dependency caught!"<<std::endl;
 				return false;
 			}
 			for (int i = 0; i < var.size(); i++)
@@ -491,25 +493,15 @@ vector<string> spreadsheet::get_variables(string contents)
 	vector<string> input;
 	vector<string> variables;
 	string inputString = contents;
-	char delimeters[5] = { '-', '+', '*', '/', '=' };
-	for (int i = 0; i < 5; i++)
+	char delimeters[5] = { '-', '+', '*', '/', '='};
+	input = split(contents, delimeters);	
+	for(string s : input)
 	{
-		input = split(inputString, delimeters[i]);
-		inputString = "";
-		for (int j = 0; j < input.size(); j++)
-		{
-			inputString += input[j];
-		}
-	}
-	for (vector<string>::iterator it = input.begin(); it != input.end(); it++)
-	{
-		//REFERENCE: tutorialspoint.com/c_standard_library/c_function_atoi.htm
-		//atoi returns 0 if the string is not converted to an integer, thus it is a variable
-		int val = atoi((*it).c_str());
-		if (val == 0 && ((*it).c_str() != "0"))
-		{
-			variables.push_back(*it);
-		}
+          int val = atoi(s.c_str());
+          if(val == 0)
+          {
+	     variables.push_back(s);
+           }
 	}
 	return variables;
 }
@@ -634,15 +626,34 @@ spreadsheet::message spreadsheet::deserialize_message(string input)
 	return result;
 }
 
-vector<string> spreadsheet::split(string str, char delimeter)
+vector<string> spreadsheet::split(string str, char delimeter[])
 {
 	std::stringstream ss(str);
 	string item;
 	vector<string> splittedStrings;
-
-	while (std::getline(ss, item, delimeter))
-	{
-		splittedStrings.push_back(item);
+	int pos = str.length();
+	int last = 0;
+	string s = str;
+	while(pos <= str.length())
+	  { //just for jogn
+	  bool result = true;
+	  for(int i = 0; i < 5; i++)
+	  {
+	    int position = s.find_first_of(delimeter[i]);
+	    if(pos > position && position != -1)
+	      pos = position;
+	    if(position != -1)
+	      result = false;
+	  }
+	  if(result)
+	  {
+	    splittedStrings.push_back(s.substr(0, pos));
+	    break;
+	  }
+	  if(pos != 0)
+	    splittedStrings.push_back(s.substr(0, pos - 1));
+          s = s.substr(pos + 1);
+	  pos = s.length();
 	}
 	return splittedStrings;
 }
