@@ -16,6 +16,7 @@ class user
         int size;
 		std::string ssname;    
         std::string currcell;
+        std::string* data;
     public:
 		user();
         user(int id, int sock, std::string name, std::string ssname); // Constructor
@@ -29,6 +30,9 @@ class user
         void clear_buffer(); // Sets up a new buffer
         std::string get_current();
         void set_current(std::string curr);
+        std::string* get_data();
+        void add_data(std::string data);
+        void remove_data(int start, int length);
 };
 
 #endif

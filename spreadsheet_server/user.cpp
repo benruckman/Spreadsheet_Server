@@ -9,6 +9,7 @@ user::user()
 	this->socket = -1;
 	this->ssname =""; 
 	this->buffer = NULL;	
+  this->data = nullptr;
 }
 /*
  * TODO: Fill out documentation
@@ -24,6 +25,7 @@ user::user(int id, int socket, std::string username, std::string ssname)
   char buffer[1024];
   this->buffer = buffer;
   this->currcell = "A1";
+  this->data = new std::string();
 }
  
 /*
@@ -31,7 +33,7 @@ user::user(int id, int socket, std::string username, std::string ssname)
  */
 user::~user()
 {
-
+  //free(data);
 }
 /*
  * TODO: Fill out documentation
@@ -94,3 +96,18 @@ void user::clear_buffer()
 }
 
 
+std::string* user::get_data()
+{
+  return this->data;
+}
+
+void user::add_data(std::string data)
+{
+  this->data->append(data);
+}
+
+void user::remove_data(int start, int length)
+{
+   this->data->erase(start, length);
+}
+        

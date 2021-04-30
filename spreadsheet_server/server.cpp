@@ -222,12 +222,29 @@ int main(int argc, char* argv[])
 					// a message came in, print it
 					else
 					{
+
 						std::string message = cli->get_buffer();
 						cli->clear_buffer();
 						pthread_mutex_lock(&mutexsheets);
 						auto it = spreads.find(cli->get_ssname());
 						spreadsheet* s = it->second;
-						s->add_message(message, cli->get_id());
+						cli->add_data(message);
+						std::string* data = cli->get_data();
+						std::string delimiter = "\n";
+						size_t pos = 0;
+						std::string token;
+						while ((pos = data->find(delimiter)) != std::string::npos) 
+						{
+    						token = data->substr(0, pos);
+    						std::cout <<"token: " << token << std::endl;
+    						cli->remove_data(0, data->find(delimiter) + delimiter.length());
+							//data.erase(0, data.find(delimiter) + delimiter.length());
+							if(token.size() > 1)
+							{
+								s->add_message(token, cli->get_id());
+							}
+						}
+						cli->add_data(*data);
 						pthread_mutex_unlock(&mutexsheets);
 					}
 				}
