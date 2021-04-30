@@ -23,7 +23,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ="America/Salt Lake City"
 
 # Copy the source code into a the image under a directory called "server".
-COPY . /server
+COPY . .
 
 # Install a handful of useful libraries.  Note that this is generally against
 # best practices -- containers should be lean, and not include 'things you
