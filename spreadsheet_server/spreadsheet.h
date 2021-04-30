@@ -58,6 +58,7 @@ class spreadsheet
     queue<message> message_queue;
     // Keeps track of all the users that are connected to the spreadsheet
     vector<user> user_list;
+    
     //dependency graph to keep track of cells that a certain cell depend on
     DependencyGraph g;
 

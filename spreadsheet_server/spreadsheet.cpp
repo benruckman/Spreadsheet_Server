@@ -37,14 +37,22 @@ pthread_mutex_t mutexqueue = PTHREAD_MUTEX_INITIALIZER;
 spreadsheet::spreadsheet(string name)
 {
 	this->spreadsheet_name = name;
+	
 	map <string, cell > cells;
 	this->non_empty_cells = cells;
+
+	map<string, queue<string>> cellHistory;
+	this->cell_history = cellHistory;
+
 	queue<message> messages;
 	this->message_queue = messages;
+	
 	vector<user> users;
 	this->user_list = users;
+	
 	stack<edit>* history_real = new stack<edit>;
 	this->history_real = history_real;
+	
 	open_spreadsheet(name);
 }
 
@@ -61,7 +69,14 @@ spreadsheet::spreadsheet()
  */
 spreadsheet::~spreadsheet()
 {
-
+	int num_users = this->user_list.size();
+	
+	for (int i = 0; i < num_users; i++)
+	{
+		delete &user_list[i];
+	}
+	
+	delete history_real;
 }
 
 /* Returns the spreadsheet name
@@ -255,6 +270,7 @@ void spreadsheet::add_user(user* new_user)
 	user_list.push_back(*new_user);
 }
 
+
 /* Removes a user from this spreadsheet
  * 
  * Parameters: this, and the user to remove
@@ -272,6 +288,19 @@ void spreadsheet::remove_user(int id)
 		}
 	}
 }
+
+
+std::stack<std::string> spreadsheet::get_spreadsheet_history()
+{
+	return this->spreadsheet_history;
+}
+
+
+map<string, queue<string>> spreadsheet::get_cell_history()
+{
+	return this->cell_history;
+}
+
 
 /* Reverts the contents of a cell to what was previously held in it
  * 
@@ -396,6 +425,7 @@ void spreadsheet::save()
 
 }
 
+
 /* Opens and writes the contents of a spreadsheet file to this spreadsheet
  * 
  * Parameters: this, the filename of the spreadsheet to read from
@@ -421,6 +451,7 @@ void spreadsheet::open_spreadsheet(string file_name)
 	file.close();
 }
 
+
 /* "Normalizes" the contents of a cell, i.e. brings it to uppercase
  * 
  * Parameters: this, the contents of a cell
@@ -436,6 +467,7 @@ string spreadsheet::normalize(string cell_contents)
 	}
 	return normalized_contents;
 }
+
 
 /* Attempts to process all requests currently in the queue,
  * 		and sends the processed messages back to all clients of this spreadsheet
@@ -508,6 +540,7 @@ bool spreadsheet::process_messages()
 	return true;
 }
 
+
 /* Returns all variables from a cells contents
  * 
  * Parameters: this, and the cells contents
@@ -541,6 +574,7 @@ vector<string> spreadsheet::get_variables(string contents)
 	}
 	return variables;
 }
+
 
 /* Returns this spreadsheets dependency graph
  * 
@@ -607,6 +641,7 @@ void spreadsheet::send_selections(int socket)
 	}
 }
 
+
 /* Serializes a cell update message into proper JSON
  * 
  * Parameters: this, the messageType, the cellname, and the cell contents
@@ -618,6 +653,7 @@ string spreadsheet::serialize_cell_update(string messageType, string cellName, s
 	string output = "{\"messageType\": \"" + messageType + "\", \"cellName\": \"" + cellName + "\", \"contents\": \"" + contents + "\"}\n";
 	return output;
 }
+
 
 /* Serializes a cell select message into proper JSON
  * 
@@ -631,6 +667,7 @@ string spreadsheet::serialize_cell_selected(string messageType, string cellName,
 	return output;
 }
 
+
 /* Serializes a cell disconnect message into proper JSON
  * 
  * Parameters: this, the messageType, and the user ID of the disconnected user
@@ -643,6 +680,7 @@ string spreadsheet::serialize_disconnected(string messageType, int user)
 	return output;
 }
 
+
 /* Serializes a cell invalid request message into proper JSON
  * 
  * Parameters: this, the messageType, the cellname, and the invalid request reason
@@ -653,6 +691,7 @@ string spreadsheet::serialize_invalid_request(string messageType, string cellNam
 	string output = "{\"messageType\": \"" + messageType + "\", \"cellName\": \"" + cellName + "\", \"message\": \"" + message + "\"}\n";
 	return output;
 }
+
 
 /* Serializes a server shutdown message to proper JSON
  * 
@@ -665,6 +704,7 @@ string spreadsheet::serialize_server_shutdown(string messageType, string message
 	string output = "{\"messageType\": \"" + messageType + "\", \"message\": \"" + message + "\"}\n";
 	return output;
 }
+
 
 /* Deserializes a JSON cell request into a message the spreadsheet can read
  * 
@@ -714,4 +754,3 @@ vector<string> spreadsheet::split(string str, char delimeter)
 	}
 	return splittedStrings;
 }
-

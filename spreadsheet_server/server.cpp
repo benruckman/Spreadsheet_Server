@@ -425,7 +425,7 @@ int error_exit(std::string err)
  */
 void shut_down(int sigint)
 {
-	std::cout << "Cleaning up" << std::endl;
+	std::cout <<"\nCleaning up" << std::endl;
 
 	// Send a server closing message to all of our connected clients
 	pthread_mutex_lock(&mutex);
@@ -446,16 +446,20 @@ void shut_down(int sigint)
 
 	// Save all of the spreadsheets
 	pthread_mutex_lock(&mutexsheets);
-	for (auto it : spreads)
+	for (auto sheet_it : spreads)
 	{
-		std::cout << "Saving spreadsheet "<< it.first << std::endl;
-		string key = it.first;
+		std::cout << "Saving spreadsheet "<< sheet_it.first << std::endl;
+		
+		string key = sheet_it.first;
 		auto value = spreads.find(key);
 		spreadsheet* s = value->second;
+		
 		s->save();
+		
+		delete s;
 	}
 	pthread_mutex_unlock(&mutexsheets);
-
+  
 	// Kill the processing thread, and exit the program
 	pthread_cancel(updatethread); 
 	std::cout << "Exiting" << std::endl;
