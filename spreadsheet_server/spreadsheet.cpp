@@ -195,10 +195,6 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 		if (content[0] == '=') // this is a formula
 		{
 			vector<string> var = get_variables(content);
-			for(int i = 0; i < var.size(); i++)
-			{
-			  std::cout<<"Variables in the content : "<<var[i]<<std::endl;
-			}
 			if (creates_circular_dependency(name, var)) {
 			  std::cout<<"Circular dependency caught!"<<std::endl;
 				return false;
