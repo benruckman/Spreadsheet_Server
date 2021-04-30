@@ -151,7 +151,7 @@ class spreadsheet
     //deserialize the incoming messages from the client to the server
     message deserialize_message(string input);
 
-    vector<string> split(string str, char delimeter);
+    vector<string> split(string str, char delimeter[]);
 
     queue<message> get_message_queue();
 

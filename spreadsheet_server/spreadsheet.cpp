@@ -487,25 +487,7 @@ vector<string> spreadsheet::get_variables(string contents)
 	vector<string> input;
 	vector<string> variables;
 	string inputString = contents;
-	char delimeters[5] = { '-', '+', '*', '/', '=' };
-	for (int i = 0; i < 5; i++)
 	{
-		input = split(inputString, delimeters[i]);
-		inputString = "";
-		for (int j = 0; j < input.size(); j++)
-		{
-			inputString += input[j];
-		}
-	}
-	for (vector<string>::iterator it = input.begin(); it != input.end(); it++)
-	{
-		//REFERENCE: tutorialspoint.com/c_standard_library/c_function_atoi.htm
-		//atoi returns 0 if the string is not converted to an integer, thus it is a variable
-		int val = atoi((*it).c_str());
-		if (val == 0 && ((*it).c_str() != "0"))
-		{
-			variables.push_back(*it);
-		}
 	}
 	return variables;
 }
@@ -630,15 +612,10 @@ spreadsheet::message spreadsheet::deserialize_message(string input)
 	return result;
 }
 
-vector<string> spreadsheet::split(string str, char delimeter)
 {
 	std::stringstream ss(str);
 	string item;
 	vector<string> splittedStrings;
-
-	while (std::getline(ss, item, delimeter))
-	{
-		splittedStrings.push_back(item);
 	}
 	return splittedStrings;
 }
