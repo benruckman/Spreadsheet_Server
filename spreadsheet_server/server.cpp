@@ -45,6 +45,11 @@ user clients[MAX_CLIENTS];
 // the set of spreadsheets
 std::unordered_map<string, spreadsheet*> spreads;
 
+// the set of all handsh
+
+// the id of the update thread, so we may kill it later
+pthread_t updatethread;
+
 // the main entry point of our application
 int main(int argc, char* argv[])
 {
@@ -113,7 +118,6 @@ int main(int argc, char* argv[])
 	std::cout << "Waiting for connections..." << std::endl;
 
 	// thread to constantly update spreadsheets
-	pthread_t updatethread;
 	pthread_create(&updatethread, NULL, update_spreadsheets, NULL);
 	pthread_detach(updatethread);
 	// REMEMEBER TO KILL ME WHEN MAIN ENDS
@@ -354,7 +358,6 @@ void* handle_connection(void* sd)
 	pthread_mutex_unlock(&mutex);
 	pthread_exit(0);
 	return 0;
-
 }
 
 // updates spreadsheets
@@ -388,16 +391,15 @@ int error_exit(std::string err)
 // Cleanly shusts down the server
 void shut_down(int sigint)
 {
-	std::cout << "SHUTTING DOWN" << std::endl;
+	std::cout << "Cleaning up" << std::endl;
+
 	// add a new user to map of sockets, and to list of spreadsheets
-
-	
-
 	pthread_mutex_lock(&mutex);
 	for (int i = 0; i < MAX_CLIENTS - 1; i++)
 	{
 		if (clients[i].get_id() != -1)
 		{
+			std::cout << "Sending disconnect message to "<< clients[i].get_username() << std::endl;
 			spreadsheet ss("");
 			string s = ss.serialize_server_shutdown("serverError", "Server is closing");
 			int n = s.length();
@@ -411,17 +413,16 @@ void shut_down(int sigint)
 	pthread_mutex_lock(&mutexsheets);
 	for (auto it : spreads)
 	{
+		std::cout << "Saving spreadsheet "<< it.first << std::endl;
 		string key = it.first;
 		auto value = spreads.find(key);
 		spreadsheet* s = value->second;
 		s->save();
-		std::cout << "SAVED" << std::endl;
 	}
 	pthread_mutex_unlock(&mutexsheets);
-
-	
-
-	exit(sigint);
+	pthread_cancel(updatethread); 
+	std::cout << "Exiting" << std::endl;
+	exit(0);
 }
 
 

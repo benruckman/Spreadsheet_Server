@@ -42,9 +42,9 @@ spreadsheet::spreadsheet(string name)
 	this->message_queue = messages;
 	vector<user> users;
 	this->user_list = users;
-	open_spreadsheet(name);
 	stack<edit>* history_real = new stack<edit>;
 	this->history_real = history_real;
+	open_spreadsheet(name);
 }
 
 
@@ -185,8 +185,6 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 			e.name = name;
 			e.contents = content;
 			this->history_real->push(e);
-			std::cout << history_real->top().contents << std::endl;
-			std::cout << "PUSH TO HISTORY: " << e.name << " " << e.contents << " SIZE: " << history_real->size() << std::endl;
 		}
 		non_empty_cells[name] = *c;
 		return true;
@@ -212,8 +210,6 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 		e.name = name;
 		e.contents = content;
 		this->history_real->push(e);
-		std::cout << history_real->top().contents << std::endl;
-		std::cout << "PUSH TO HISTORY: " << e.name << " " << e.contents <<  " SIZE: " << history_real->size() <<std::endl;
 		return true;
 	}
 }
@@ -352,46 +348,6 @@ string spreadsheet::undo()
 	return "";
 }
 
-//string spreadsheet::undo()
-//{
-//	std::cout << "undo" << std::endl;
-//	if (!history_real.empty())
-//	{
-//		std::cout << "top :" << history_real.top().name << " " <<history_real.top().contents<< std::endl;
-//		edit e = history_real.top();
-//		string last = e.name;
-//		auto it = non_empty_cells.find(last);
-//		string ret = last + " ";
-//		if (it != non_empty_cells.end())
-//		{
-//			cell* c = &it->second;
-//			if (c->cell_contents.empty())
-//			{
-//			}
-//			else
-//			{
-//				c->cell_contents.pop();
-//				if (c->cell_contents.empty())
-//				{
-//
-//				}
-//				else
-//				{
-//					string newc = c->cell_contents.top();
-//					set_contents_of_cell(last, newc, true);
-//					ret = last + " " + newc;
-//				}
-//			}
-//		}
-//		else
-//		{
-//		}
-//		history_real.pop();
-//		return ret;
-//	}
-//	return "";
-//}
-
 
 /*
  * TODO: Document
@@ -417,7 +373,6 @@ void spreadsheet::save()
 	{
 		edit e = reverse_history.top();
 		string cells = e.name + " " + e.contents + "\n";
-		std::cout << "saving cell: " << cells << std::endl;
 		f << cells;
 		reverse_history.pop();
 	}
@@ -442,9 +397,7 @@ void spreadsheet::open_spreadsheet(string file_name)
 		size_t last_index = line.find_first_of(" ");
 		cell_name = line.substr(0, last_index);
 		cell_contents = line.substr(cell_name.length() + 1);
-		if (set_contents_of_cell(cell_name, cell_contents, false))
-			std::cout << "true" << std::endl;
-		
+		set_contents_of_cell(cell_name, cell_contents, false);	
 	}
 	file.close();
 }
@@ -495,7 +448,6 @@ bool spreadsheet::process_messages()
 				size_t last_index = line.find_first_of(" ");
 				std::string cell_name = line.substr(0, last_index);
 				std::string cell_contents = line.substr(cell_name.length() + 1);
-				std::cout << line << std::endl;
 				message = serialize_cell_update("cellUpdated", cell_name, cell_contents);
 			}
 		}
@@ -587,7 +539,6 @@ void spreadsheet::send_disconnect(int ID)
 	strcpy(message, s.c_str());
 	for (vector<user>::iterator it = user_list.begin(); it != user_list.end(); it++)
 	{
-		std::cout << message << std::endl;
 		send(it->get_socket(), message, strlen(message), 0);
 	}
 }
