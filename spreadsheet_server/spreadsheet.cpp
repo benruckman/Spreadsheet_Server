@@ -50,6 +50,9 @@ spreadsheet::spreadsheet(string name)
 	stack<edit>* history_real = new stack<edit>;
 	this->history_real = history_real;
 	
+	DependencyGraph d;
+	this->g = d;
+
 	open_spreadsheet(name);
 }
 
@@ -701,13 +704,28 @@ spreadsheet::message spreadsheet::deserialize_message(string input)
 	int i = 0;
 	while (input.find(tester, start) != string::npos)
 	{
-		int findPos = input.find(tester, start); //finds first quote mark
-		int findPos2 = input.find(tester, findPos + 1); //finds second quote mark
-		std::string name;
-		string neww = input.substr(findPos + 1, (findPos2 - findPos) - 1);
-		outputs[i] = neww;
-		start = findPos2 + 1;
-		i++;
+		if(i < 5)
+		{
+			int findPos = input.find(tester, start); 		// finds first quote mark
+			int findPos2 = input.find(tester, findPos + 1); // finds second quote mark
+			std::string name;
+			string neww = input.substr(findPos + 1, (findPos2 - findPos) - 1);
+			outputs[i] = neww;
+			start = findPos2 + 1;
+			i++;
+		}
+		else
+		{
+			int findPos = input.find(tester, start);   // finds first quote mark
+			int findPos2 = input.find_last_of(tester); // finds second quote mark
+			std::string name;
+			string neww = input.substr(findPos + 1, (findPos2 - findPos) - 1);
+			std::cout <<"outputs: " << neww << std::endl;
+			outputs[i] = neww;
+			start = findPos2 + 1;
+			i++;
+		}
+		
 	}
 	result.type = outputs[1];
 	result.name = outputs[3];
