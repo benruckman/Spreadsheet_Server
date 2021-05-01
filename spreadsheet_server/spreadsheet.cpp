@@ -380,6 +380,7 @@ string spreadsheet::revert_cell(string selectedCell)
 				{
 					vector<string> var = get_variables(neww);
 					if (creates_circular_dependency(selectedCell, var)) {
+						c->current_reverts.pop();
 						c->cell_contents.push(old);
 						return "";
 					}
@@ -631,11 +632,13 @@ vector<string> spreadsheet::get_variables(string contents)
 	input = split(contents, delimeters);	
 	for(string s : input)
 	{
-          int val = atoi(s.c_str());
-          if(val == 0)
-          {
-	     variables.push_back(s);
-           }
+        int val = atoi(s.c_str());
+        if(val == 0)
+        {
+			for (auto & c: s) 
+				c = toupper(c);
+	     	variables.push_back(s);
+        }
 	}
 	return variables;
 }
