@@ -68,43 +68,49 @@ void DependencyGraph::addDependency(const string &s, const string &t)
 {
     bool pairAdded;
     
+    set<string> dependentList_s = getDependents(s);
+    set<string> dependeeList_t = getDependees(t);
+    
     if(hasDependents(s))
     {
-        set<string> dependentList_s = getDependents(s);
+        std::cout<<s<<" "<<t<<std::endl;
         if(dependentList_s.find(t) == dependentList_s.end())
         {
-            
             dependentList_s.insert(t);
+            dependents.insert({s, dependentList_s});
             pairAdded = 1;
-            
         }
-        else
+        else //t is already a dependent of s
         {
-            set<string> st;
-            st.insert(t);
-            dependents.insert({s, st});
-            pairAdded = 1;
+            pairAdded = 0;
         }
         
+    }else{
+      std::cout<<s<<" "<<t<<std::endl;
+      dependentList_s.insert(t);
+      dependents.insert({s, dependentList_s});
+      set<string> depedentstest = getDependents(s);
+      //for(set<string>::iterator i = dependentList_s.begin(); i != dependentList_s.end(); i++)
+      pairAdded = 1;
     }
     
     if(hasDependees(t))
     {
-        set<string> dependees_t = getDependees(t);
-        if(dependees_t.find(s) == dependees_t.end()) 
+        if(dependeeList_t.find(s) == dependeeList_t.end())
         {
-            dependees_t.insert(s);
+            dependeeList_t.insert(s);
+            dependents.insert({t, dependeeList_t});
             pairAdded = 1;
         }
-        
-        else
+        else //s is already a dependee of t
         {
-            set<string> st;
-            st.insert(s);
-            dependees.insert({t, st});
-            pairAdded = 1;
+            pairAdded = 0;
         }
         
+    }else{
+      dependeeList_t.insert(s);
+      dependees.insert({t, dependeeList_t});
+      pairAdded = 1;
     }
     
     if(pairAdded) p_size++;

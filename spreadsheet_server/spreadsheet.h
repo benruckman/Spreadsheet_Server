@@ -50,6 +50,9 @@ class spreadsheet
     // Key is the name of the cell, and the value is the contents of a particular cell
     map<string, cell> non_empty_cells;
     
+    // Key is the name of the cell, value is any variables it holds
+    map<string, set<string>> variables;
+    
     // DependencyGraph g; *needs to create a dependencygraph class so that when cells are getting changed, all other cells that depend on it could be changed
     // Keeps track of all the changes that has been made to the cell
     std::stack<string> spreadsheet_history;
@@ -102,7 +105,9 @@ class spreadsheet
     bool set_contents_of_cell(string name, string content, bool undo);
     
     // Helper method that checks whether the variables belonging to a formula in name will cause a circular dependency.
-    bool creates_circular_dependency(const string name, const vector<string> &vars);
+    bool creates_circular_dependency(string name, vector<string> &vars);
+    
+    bool visit(string &start, string name, set<string> &visited); 
     
     // This method will undo the change made to the spreadsheet
     string revert_cell(string selectedCell);

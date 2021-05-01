@@ -52,6 +52,9 @@ spreadsheet::spreadsheet(string name)
 	
 	DependencyGraph d;
 	this->g = d;
+	
+	map<string, set<string>> vars;
+	this->variables = vars;
 
 	open_spreadsheet(name);
 }
@@ -71,10 +74,10 @@ spreadsheet::~spreadsheet()
 {
 	int num_users = this->user_list.size();
 	
-	for (int i = 0; i < num_users; i++)
-	{
-		delete &user_list[i];
-	}
+	// for (int i = 0; i < num_users; i++)
+	// {
+	// 	remove_user(user_list[i].get_id())
+	// }
 	
 	delete history_real;
 }
@@ -197,12 +200,9 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 
 				return false;
 			}
-			set<string> newDependents;
-			for (int i = 0; i < var.size(); i++)
-			{
-				newDependents.insert(var[i]);
-			}
-			get_dependency_graph().replaceDependents(name, newDependents);
+		}
+		else{
+			variables.erase(name);
 		}
 		if (!undo)
 		{
@@ -226,10 +226,9 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 
 				return false;
 			}
-			for (int i = 0; i < var.size(); i++)
-			{
-				get_dependency_graph().addDependency(name, var[i]);
-			}
+		}
+		else{
+			variables.erase(name);
 		}
 		cell c;
 		c.cell_name = name;
@@ -247,20 +246,64 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
  * 
  * Parameters: this, the name of the cell, and a list of the cells variables in its contents
  *
- * Returns: True if it creates a dependency, false otherwise
+ * Returns: True if it creates a circular dependency, false otherwise
  */
-bool spreadsheet::creates_circular_dependency(const string name, const vector<string>& vars) {
-	for (int i = 0; i < vars.size(); i++) {
-		if (get_dependency_graph().hasDependents(vars[i])) {
-			set<string> var_dependents = get_dependency_graph().getDependents(vars[i]);
-			for (set<string>::iterator i = var_dependents.begin(); i != var_dependents.end(); i++) {
-				if (*i == name) {
-					return true;
-				}
-			}
-		}
+bool spreadsheet::creates_circular_dependency(string name, vector<string>& vars) {
+	set<string> oldDependees;
+	auto it = variables.find(name);
+	
+	if(it != variables.end()){
+		oldDependees = it->second;
+	}
+	
+	set<string> newDependees;
+	
+	for (int i = 0; i < vars.size(); i++)
+	{
+		newDependees.insert(vars[i]);
+	}
+	
+	set<string> visited;
+	variables[name] = newDependees;
+	
+	if(!visit(name, name, visited)){
+		variables[name] = oldDependees;
+		return true;
 	}
 	return false;
+	// for (int i = 0; i < vars.size(); i++) {
+	// 	if(vars[i] == name){
+	// 		return true;
+	// 	}
+	// 	if (get_dependency_graph().hasDependents(vars[i])) {
+	// 		set<string> var_dependents = get_dependency_graph().getDependents(vars[i]);
+	// 		for (set<string>::iterator i = var_dependents.begin(); i != var_dependents.end(); i++) {
+	// 			if (*i == name) {
+	// 				return true;
+	// 			}
+	// 		}
+	// 	}
+	// }
+	// return false;
+}
+bool spreadsheet::visit(string &start, string name, set<string> &visited) {
+    visited.insert(name);
+    
+    set<string> var_dependees = variables.find(name)->second;
+    std::cout<<"name: "<<start<<std::endl;
+	for (set<string>::iterator i = var_dependees.begin(); i != var_dependees.end(); i++) {
+		std::cout<<*i<<std::endl;
+        if (*i == start)
+        {
+        	std::cout<<"circ dependency caught: "<<*i<<std::endl;
+            return false;
+        }
+		if(visited.find(*i) == visited.end()){
+			std::cout<<"circ dependency not caught: "<<*i<<std::endl;
+            return visit(start, *i, visited);
+        }
+    }
+    return true;
 }
 
 /* Adds a new user to this spreadsheet
@@ -321,18 +364,27 @@ string spreadsheet::revert_cell(string selectedCell)
 			c->current_reverts.push(old);
 			if (c->cell_contents.empty())
 			{
-				// TODO: destroy dependencies
 				edit e;
 				e.name = selectedCell;
 				e.contents = "";
 				this->history_real->push(e);
+				variables.erase(e.name);
 				//non_empty_cells.erase(selectedCell);
 				return ret;
 			}
 			else
 			{
-				// TODO: check for dependencies
 				string neww = c->cell_contents.top();
+				
+				if (neww[0] == '=') // this is a formula
+				{
+					vector<string> var = get_variables(neww);
+					if (creates_circular_dependency(selectedCell, var)) {
+						c->cell_contents.push(old);
+						return "";
+					}
+				}
+				
 				edit e;
 				e.name = selectedCell;
 				e.contents = neww;
@@ -369,6 +421,16 @@ string spreadsheet::undo()
 			if (!c->current_reverts.empty())
 			{
 				string s = c->current_reverts.top();
+				if(s[0] == '='){
+					set<string> ss;
+					vector<string> vars = get_variables(s);
+					for(int i = 0; i < vars.size(); i++){
+						ss.insert(vars[i]);
+					}
+					variables[last] = ss;
+				}else{
+					variables.erase(last);
+				}
 				c->current_reverts.pop();
 				c->cell_contents.push(s);
 				ret = e.name + " " + c->cell_contents.top();
@@ -376,6 +438,17 @@ string spreadsheet::undo()
 			else if (!c->cell_contents.empty())
 			{
 				c->cell_contents.pop();
+				string s = c->cell_contents.top();
+				if(s[0] == '='){
+					set<string> ss;
+					vector<string> vars = get_variables(s);
+					for(int i = 0; i < vars.size(); i++){
+						ss.insert(vars[i]);
+					}
+					variables[last] = ss;
+				}else{
+					variables.erase(last);
+				}
 				ret = e.name + " " + c->cell_contents.top();
 			}
 		}
@@ -481,9 +554,12 @@ bool spreadsheet::process_messages()
 			if (!set_contents_of_cell(m.name, m.contents, false))
 			{
 				message = serialize_invalid_request("requestError", m.name, "Circular dependency created.");
-				std::cout << "circular dependency" << std::endl;
+				int n = message.length();
+				char mess[n + 1];
+				strcpy(mess, message.c_str());
+				send(m.sender->get_socket(), mess, strlen(mess), 0);
+				continue;
 			}
-				
 			else
 				message = serialize_cell_update("cellUpdated", m.name, m.contents);
 		}
@@ -512,6 +588,13 @@ bool spreadsheet::process_messages()
 				std::string cell_name = line.substr(0, last_index);
 				std::string cell_contents = line.substr(cell_name.length() + 1);
 				message = serialize_cell_update("cellUpdated", cell_name, cell_contents);
+			}else{
+				message = serialize_invalid_request("requestError", m.name, "Circular dependency created.");
+				int n = message.length();
+				char mess[n + 1];
+				strcpy(mess, message.c_str());
+				send(m.sender->get_socket(), mess, strlen(mess), 0);
+				continue;
 			}
 		}
 		else

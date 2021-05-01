@@ -437,6 +437,7 @@ void shut_down(int sigint)
 			char message[n + 1];
 			strcpy(message, s.c_str());
 			send(clients[i].get_socket(), message, strlen(message), 0);
+			//delete &clients[i];
 		}
 	}
 	pthread_mutex_unlock(&mutex);

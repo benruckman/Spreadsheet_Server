@@ -445,7 +445,7 @@ def test5(ip_address):
     if (succeeded is False):
         return False
     #test that we do NOT receive a cellselect update from s1
-    return testCellSelectWithTwo(s1, s2, "B2")
+    return not testCellSelectWithTwo(s1, s2, "B2")
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
