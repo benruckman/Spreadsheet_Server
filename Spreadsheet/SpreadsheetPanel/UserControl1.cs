@@ -585,35 +585,38 @@ namespace SS
                         DrawRowLabel(e.Graphics, y, f);
                     }
 
-                /*
-                // Highlight the selection, if it is visible
-                if ((_selectedCol - _firstColumn >= 0) && (_selectedRow - _firstRow >= 0))
-                {
-                    e.Graphics.DrawRectangle(
-                        pen,
-                        new Rectangle(LABEL_COL_WIDTH + (_selectedCol - _firstColumn) * DATA_COL_WIDTH + 1,
-                                      LABEL_ROW_HEIGHT + (_selectedRow - _firstRow) * DATA_ROW_HEIGHT + 1,
-                                      DATA_COL_WIDTH - 2,
-                                      DATA_ROW_HEIGHT - 2));
-                }
-                */
 
-                //Explicitly for drawing other user's highlighted cells 
-                foreach (int id in otherUsers.Keys)
-                {
-                    Address a = otherUsers[id];
-                    //We need this to happen for all different people selecting in our code spreadsheet, for the spreadsheet server. 
-                    if ((a.Col - _firstColumn >= 0) && (a.Row - _firstRow >= 0))
+
+
+
+
+                    //Explicitly for drawing other user's highlighted cells 
+                    foreach (int id in otherUsers.Keys)
                     {
-                        pen.Color = GetColorForID(id);
+                        Address a = otherUsers[id];
+                        //We need this to happen for all different people selecting in our code spreadsheet, for the spreadsheet server. 
+                        if ((a.Col - _firstColumn >= 0) && (a.Row - _firstRow >= 0))
+                        {
+                            pen.Color = GetColorForID(id);
+                            e.Graphics.DrawRectangle(
+                                pen,
+                                new Rectangle(LABEL_COL_WIDTH + (a.Col - _firstColumn) * DATA_COL_WIDTH + 1,
+                                              LABEL_ROW_HEIGHT + (a.Row - _firstRow) * DATA_ROW_HEIGHT + 1,
+                                              DATA_COL_WIDTH - 2,
+                                              DATA_ROW_HEIGHT - 2));
+                        }
+                    }
+                    pen.Color = Color.Black;
+                    // Highlight the selection, if it is visible
+                    if ((_selectedCol - _firstColumn >= 0) && (_selectedRow - _firstRow >= 0))
+                    {
                         e.Graphics.DrawRectangle(
                             pen,
-                            new Rectangle(LABEL_COL_WIDTH + (a.Col - _firstColumn) * DATA_COL_WIDTH + 1,
-                                          LABEL_ROW_HEIGHT + (a.Row - _firstRow) * DATA_ROW_HEIGHT + 1,
+                            new Rectangle(LABEL_COL_WIDTH + (_selectedCol - _firstColumn) * DATA_COL_WIDTH + 1,
+                                          LABEL_ROW_HEIGHT + (_selectedRow - _firstRow) * DATA_ROW_HEIGHT + 1,
                                           DATA_COL_WIDTH - 2,
                                           DATA_ROW_HEIGHT - 2));
                     }
-                }
 
                     // Draw the text
                     foreach (KeyValuePair<Address, String> address in _values)
@@ -646,7 +649,7 @@ namespace SS
             private Color GetColorForID(int id)
             {
                 int mod = id % 12;
-                switch(mod)
+                switch (mod)
                 {
                     case 0:
                         return Color.Red;
