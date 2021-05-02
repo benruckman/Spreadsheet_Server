@@ -1,6 +1,8 @@
 import socket
 import random
 import time
+import sys
+import json
 
 ### Test client for WHLOL's implementation of the Jakkpot Spreadsheet protocol.
 ### Contains a set of tests to ensure proper implementation of the protocol.
@@ -26,14 +28,12 @@ class spreadsheetSocket:
 def connectToIP(ip_address):
     #connect to given IP using a TCP connection
     #return the spreadsheetSocket
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((ip_address, 1100))
-        ssocket = spreadsheetSocket(s)
-        return ssocket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    connectionInfo = ip_address.split(":")
+    s.connect((connectionInfo[0],int(connectionInfo[1])))
+    ssocket = spreadsheetSocket(s)
+    return ssocket
     #if this fails to connect, return false so the test stops executing.
-    except Exception:
-        return False
 
 #helper method for timeouts
 #returns true if there has been a "timeout" (time since start time has passed the max time)
@@ -64,8 +64,41 @@ def receiveData(s, terminator, terminatorSize, maxTime):
 
 #run the given number of tests on a server at the given ip address.
 def main(test_number, ip_address):
-    print("hello world")
-    return -1
+    numTests = 4
+    argNum = 0
+    for arg in sys.argv[1:]:
+        argNum+=1
+        if(argNum == 1):
+            test_number = arg
+        elif(argNum == 2):
+            ip_address = arg
+    if(argNum == 0):
+        print(numTests)
+        return 0
+    else:
+        start = time.time()
+        testName = ""
+        success = True
+        if test_number == 1:
+            success = test1(ip_address)
+            testName = "Connection test"
+        elif test_number == 2:
+            success = test2(ip_address)
+            testName = "Handshake test (with new spreadsheet)"
+        elif test_number == 3:
+            success = test3(ip_address)
+            testName = "Testing selecting and editing cell with one user"
+        elif test_number == 4:
+            success = test4(ip_address)
+            testName = "Testing that selection data is sent for other user present if there are two users"
+        end = time.time()
+        print(end - start)
+        print(testName)
+        if success:
+            print("Pass\n")
+        else:
+            print("Fail\n")
+    return 0
 
 #test a correct handshake over spreadsheetSocket s, ensure that the proper data is sent back by server
 #this method creates a new spreadsheet during the handshake.
@@ -74,7 +107,7 @@ def testHandshakeWithNewSpreadsheet(s):
         # send the client name (terminated by newline) over s.socket
         # set this name to s.name
         name = str(random.randint(-1000,1000))
-        s.socket.sendall(name + "\n")
+        s.socket.sendall((name + "\n").encode('utf-8'))
         s.setName(name)
 
         #ensure that the server sends back some string that is terminated by newline
@@ -84,18 +117,18 @@ def testHandshakeWithNewSpreadsheet(s):
 
         # send back a spreadsheet name that doesn't currently exist on the server (terminated by newline)
         # save this spreadsheet name for later use
-        #if spreadsheets exist
+        # if spreadsheets exist
         if(data != "\n\n"):
             spreadsheetNames = data.split("\n")
             newSpreadsheetName = "1"
             #while spreadsheetNames contains our newSpreadsheetName, change the name so that it doesn't exist
             while(newSpreadsheetName in spreadsheetNames):
                 newSpreadsheetName += "1"
-            s.socket.sendall(newSpreadsheetName + "\n")
+            s.socket.sendall((newSpreadsheetName + "\n").encode('utf-8'))
             s.setSheet(newSpreadsheetName)
         #if spreadsheets don't currently exist on the server
         else:
-            s.socket.sendall("1")
+            s.socket.sendall(("1").encode('utf-8'))
             s.setSheet("1")
 
         # make sure we receive expected edits (none) and some ID number, terminated by newline.
@@ -103,8 +136,9 @@ def testHandshakeWithNewSpreadsheet(s):
         data = receiveData(s, "\n", 1, 60)
         if(data is False):
             raise Exception
+        print(data)
         #set ID
-        id = int(data[len(data)])
+        id = int(data[:-2])
         s.setID(id)
         return True
 
@@ -115,12 +149,12 @@ def testHandshakeWithNewSpreadsheet(s):
 #test a correct handshake over spreadsheetSocket s, ensure that the proper data is sent back by server
 #this method selects an existing spreadsheet during the handshake.
 #the spreadsheet that goes by the given spreadsheetName is expected to have at least one edit.
-def testHandshakeWithExistingSpreadsheet(s, spreadsheetName):
+def testHandshakeWithExistingSpreadsheet(s, spreadsheetName, otherUserConnected):
     try:
         # send the client name (terminated by newline) over s.socket
         # set this name to s.name
         name = str(random.randint(-1000,1000))
-        s.socket.sendall(name + "\n")
+        s.socket.sendall((name + "\n").encode('utf-8'))
         s.setName(name)
 
         #receieve spreadsheet list
@@ -135,17 +169,18 @@ def testHandshakeWithExistingSpreadsheet(s, spreadsheetName):
             return False
         #if it is in the list of spreadsheets, send the name
         else:
-            s.socket.sendall(spreadsheetName + "\n")
+            s.socket.sendall((spreadsheetName + "\n").encode('utf-8'))
 
         #listen for cellupdates + ID
+        data = ""
+        if(otherUserConnected):
+            data = receiveData(s, "\n", 1, 60)
         data = receiveData(s, "\n", 1, 60)
         if(data is False):
             raise Exception
-
-#note: here we can also check the validity of the sent cellupdates - currently we are unsure of the exact form these may take so this will have
-#to be updated accordingly when we talk to the TA or professor.
+        print(data)
         #get the ID from this data
-        id = int(data[data.rindex("}")+1 : len(data)-1])
+        id = int(data[:-2])
         s.setID(id)
 
     #return false if any error occurs
@@ -157,7 +192,8 @@ def testHandshakeWithExistingSpreadsheet(s, spreadsheetName):
 def testCellSelect(s, cellName):
     # send JSON message over socket of the following form: "{requestType: "selectCell", cellName: cellName}"
     try:
-        s.socket.sendall("{requestType: \"selectCell\", cellName: \"" + cellName + "\"}")
+        s.setCurrentCell(cellName)
+        s.socket.sendall(("{\"requestType\": \"selectCell\", \"cellName\": \"" + cellName + "\"}\n").encode('utf-8'))
         return True
     # return false if there's an error sending over the socket
     except Exception:
@@ -166,10 +202,10 @@ def testCellSelect(s, cellName):
 #test selecting a given cell using socket s1. spreadsheetSockets s1 and s2 are expected to have already completed server handshake.
 #ensure that s2 receives the following message after s1's cell selection:
 #{messageType: "selected", cellName: cellName, selector: s1.ID, selectorName: s1.name}
-def testCellSelect(s1, s2, cellName):
+def testCellSelectWithTwo(s1, s2, cellName):
     # send JSON message over s1.socket of the following form: "{requestType: "selectCell", cellName: cellName}"
     try:
-        s1.socket.sendall("{requestType: \"selectCell\", cellName: \"" + cellName + "\"}")
+        s1.socket.sendall(("{\"requestType\": \"selectCell\", \"cellName\": \"" + cellName + "\"}\n").encode('utf-8'))
         s1.setCurrentCell(cellName)
     # return false if there's an error sending over the socket
     except Exception:
@@ -177,11 +213,14 @@ def testCellSelect(s1, s2, cellName):
     #check that s2.socket has received a message as follows:
     #"{messageType: "selected", cellName: cellName, selector: s1.ID, selectorName: s1.name}"
     # return true if everything processes as expected, return false if error occurs.
-    data = receiveData(s2, "}", 1, 60)
+    data = receiveData(s2, "\n", 1, 60)
     if (data is False):
-        return False;
-
-    return "messageType: \"selected\", cellName: \"" + cellName + "\", selector: " + s1.ID + ", selectorName: \"" + s1.name + "\"" in data
+        return False
+    jsonvalues = json.loads(data)
+    try:
+        return jsonvalues["messageType"] == "cellSelected" and jsonvalues["cellName"] == cellName and jsonvalues["selector"] == s1.ID and jsonvalues["selectorName"] == s1.name
+    except:
+        return False
 
 #test sending a request to edit a cell on s.currentCell
 #expects s to have completed server handshake.
@@ -189,29 +228,35 @@ def testCellSelect(s1, s2, cellName):
 def testCellEdit(s, cellString):
     # send JSON message over s.socket of the following form : "{ requestType: "editCell", cellName: s.currentCell, contents: cellString }"
     try:
-        s.socket.sendall("{requestType: \"editCell\", cellName: \"" + s.currentCell + "\", contents: \"" + cellString + "\"}")
+        s.socket.sendall(("{\"requestType\": \"editCell\", \"cellName\": \"" + s.currentCell + "\", \"contents\": \"" + cellString + "\"}\n").encode('utf-8'))
     # return false if there's an error sending over the socket
     except Exception:
         return False
     # ensure the following is sent to s:
     #"{messageType: "cellUpdated", cellName: s.currentCell, contents: cellString}"
-    data = receiveData(s, "}", 1, 60)
-    return "messageType: \"cellUpdated\", cellName: \"" + s.currentCell + "\", contents: \"" + cellString + ", selectorName: \"" + s.name + "\"" in data
+    data = receiveData(s, "\n", 1, 60)
+    if data is False:
+        return False
+    jsonvalues = json.loads(data)
+    try:
+        return jsonvalues["messageType"] == "cellUpdated" and jsonvalues["cellName"] == s.currentCell and jsonvalues["contents"] == cellString
+    except Exception:
+        return False
 
 #test sending a request to edit a cell different than the one the socket currently has selected.
 #expects s to have completed server handshake.
 #intended to have cellName as a different value from s.currentCell - ensures that the server does not update a cell
-def testCellEdit(s, cellString, cellName):
+def testCellEditIncorrectCell(s, cellString, cellName):
     #send JSON message over s.socket of the following form : "{ requestType: "editCell", cellName: cellName, contents: cellString }"
     # send JSON message over s.socket of the following form : "{ requestType: "editCell", cellName: s.currentCell, contents: cellString }"
     try:
-        s.socket.sendall("{requestType: \"editCell\", cellName: \"" + cellName + "\", contents: \"" + cellString + "\"}")
+        s.socket.sendall(("{requestType: \"editCell\", cellName: \"" + cellName + "\", contents: \"" + cellString + "\"}").encode('utf-8'))
     # return false if there's an error sending over the socket
     except Exception:
         return False
     #hang for some arbitrary time to allow for internet latency
     #check that there is no cellUpdate message sent to s
-    data = receiveData(s, "}", 1, 30)
+    data = receiveData(s, "\n", 1, 10)
     #receiveData should timeout as there will be no cellupdate sent, so return true if data is False.
     return data is False
 
@@ -221,14 +266,20 @@ def testCellEdit(s, cellString, cellName):
 def testCellEditError(s, cellString):
     # send JSON message over s.socket of the following form : "{ requestType: "editCell", cellName: s.currentCell, contents: cellString }"
     try:
-        s.socket.sendall("{requestType: \"editCell\", cellName: \"" + s.currentCell + "\", contents: \"" + cellString + "\"}")
+        s.socket.sendall(("{requestType: \"editCell\", cellName: \"" + s.currentCell + "\", contents: \"" + cellString + "\"}").encode('utf-8'))
     # return false if there's an error sending over the socket
     except Exception:
         return False
     # ensure the following is sent to s:
     # "{ messageType: "requestError", cellName: s.currentCell, message: <some string> }"
-    data = receiveData(s, "}", 1, 60)
-    return ("messageType: \"requestError\", cellName: " + s.currentCell + ", message:") in data
+    data = receiveData(s, "\n", 1, 60)
+    if data is False:
+        return False
+    jsonvalues = json.loads(data)
+    try:
+        return jsonvalues["messageType"] == "requestError" and jsonvalues["cellName"] == s.currentCell
+    except Exception:
+        return False
 
 # test sending an undo request
 # expects s to have completed server handshake and for the currently selected cell to have a backlog of changes.
@@ -236,14 +287,20 @@ def testCellEditError(s, cellString):
 def testUndo(s, previousValue):
     # send JSON message over s.socket of the following form : "{"requestType": "undo"}"
     try:
-        s.socket.sendall("{requestType: \"undo\"}")
+        s.socket.sendall(("{requestType: \"undo\"}").encode('utf-8'))
     # return false if there's an error sending over the socket
     except Exception:
         return False
     # ensure the following is sent to s:
     # { messageType: "cellUpdated", cellName: s.currentCell, contents: previousValue }
-    data = receiveData(s, "}", 1, 60)
-    return "messageType: \"cellUpdated\", cellName: " + s.currentCell + ", contents: \"" + previousValue + "\"" in data
+    data = receiveData(s, "\n", 1, 60)
+    if data is False:
+        return False
+    jsonvalues = json.loads(data)
+    try:
+        return jsonvalues["messageType"] == "cellUpdated" and jsonvalues["cellName"] == s.currentCell and jsonvalues["contents"] == previousValue
+    except Exception:
+        return False
 
 # test sending an invalid undo request
 # expects s to have completed server handshake and for the currently selected cell to NOT have a backlog of changes.
@@ -251,14 +308,20 @@ def testUndo(s, previousValue):
 def testUndoError(s):
     # send JSON message over s.socket of the following form : "{"requestType": "undo"}"
     try:
-        s.socket.sendall("{requestType: \"undo\"}")
+        s.socket.sendall(("{requestType: \"undo\"}").encode('utf-8'))
     # return false if there's an error sending over the socket
     except Exception:
         return False
     # ensure the following is sent to s:
     # { messageType: "requestError", cellName: s.currentCell, message: <some string> }
-    data = receiveData(s, "}", 1, 60)
-    return ("messageType: \"requestError\", cellName: " + s.currentCell + ", message:") in data
+    data = receiveData(s, "\n", 1, 60)
+    if data is False:
+        return False
+    jsonvalues = json.loads(data)
+    try:
+        return jsonvalues["messageType"] == "requestError" and jsonvalues["cellName"] == s.currentCell
+    except Exception:
+        return False
 
 # test sending a revert request
 # expects s to have completed server handshake and for the currently selected cell to have a backlog of changes.
@@ -266,14 +329,20 @@ def testUndoError(s):
 def testRevert(s, previousValue):
     # send JSON message over s.socket of the following form : "{"requestType": "revertCell", "cellName": s.currentCell}"
     try:
-        s.socket.sendall("{requestType: \"revertCell\", \"cellName\": \"" + s.currentCell +"\"}")
+        s.socket.sendall(("{requestType: \"revertCell\", \"cellName\": \"" + s.currentCell +"\"}").encode('utf-8'))
     # return false if there's an error sending over the socket
     except Exception:
         return False
     # ensure the following is sent to s:
     # { messageType: "cellUpdated", cellName: s.currentCell, contents: previousValue }
-    data = receiveData(s, "}", 1, 60)
-    return "messageType: \"cellUpdated\", cellName: " + s.currentCell + ", contents: \"" + previousValue + "\"" in data
+    data = receiveData(s, "\n", 1, 60)
+    if data is False:
+        return False
+    jsonvalues = json.loads(data)
+    try:
+        return jsonvalues["messageType"] == "cellUpdated" and jsonvalues["cellName"] == s.currentCell and jsonvalues["contents"] == previousValue
+    except Exception:
+        return False
 
 # test sending an invalid revert request
 # expects s to have completed server handshake and for the currently selected cell to NOT have a backlog of changes.
@@ -281,14 +350,20 @@ def testRevert(s, previousValue):
 def testRevertError(s):
     # send JSON message over s.socket of the following form : "{"requestType": "revertCell", "cellName": s.currentCell}"
     try:
-        s.socket.sendall("{requestType: \"revertCell\", \"cellName\": \"" + s.currentCell +"\"}")
+        s.socket.sendall(("{requestType: \"revertCell\", \"cellName\": \"" + s.currentCell +"\"}").encode('utf-8'))
     # return false if there's an error sending over the socket
     except Exception:
         return False
     # ensure the following is sent to s:
     # { messageType: "requestError", cellName: s.currentCell, message: <some string> }
-    data = receiveData(s, "}", 1, 60)
-    return ("messageType: \"requestError\", cellName: " + s.currentCell + ", message:") in data
+    data = receiveData(s, "\n", 1, 60)
+    if data is False:
+        return False
+    jsonvalues = json.loads(data)
+    try:
+        return jsonvalues["messageType"] == "requestError" and jsonvalues["cellName"] == s.currentCell
+    except Exception:
+        return False
 
 # test disconnecting a client
 # expects s1,s2 to have completed server handshake
@@ -298,9 +373,80 @@ def closeSpreadsheet(s1, s2):
     s1.socket.close()
     # ensure the following is sent to s2:
     # {messageType: "disconnected", user: s1.ID}
-    data = receiveData(s2, "}", 1, 60)
-    return "messageType: \"disconnected\", user: " + s1.ID in data
+    data = receiveData(s2, "\n", 1, 60)
+    if data is False:
+        return False
+    jsonvalues = json.loads(data)
+    try:
+        return jsonvalues["messageType"] == "disconnected" and jsonvalues["user"] == s1.ID
+    except Exception:
+        return False
+
+#test connection
+def test1(ip_address):
+    s1 = connectToIP(ip_address)
+    if s1 is False:
+        return False
+    return True
+
+#test handshake
+def test2(ip_address):
+    s1 = connectToIP(ip_address)
+    if s1 is False:
+        return False
+    return testHandshakeWithNewSpreadsheet(s1)
+
+#test selecting and editing a cell yourself
+def test3(ip_address):
+    s1 = connectToIP(ip_address)
+    if s1 is False:
+        return False
+    succeeded = testHandshakeWithNewSpreadsheet(s1)
+    if(succeeded is False):
+        return False
+    if testCellSelect(s1,"A1") is False:
+        return False
+    return testCellEdit(s1, "abc")
+    #return True
+
+#test receiving data for someone else selecting a cell
+def test4(ip_address):
+    #connect first socket
+    s1 = connectToIP(ip_address)
+    if s1 is False:
+        return False
+    succeeded = testHandshakeWithNewSpreadsheet(s1)
+    if (succeeded is False):
+        return False
+    #connect second socket
+    s2 = connectToIP(ip_address)
+    if s2 is False:
+        return False
+    succeeded = testHandshakeWithExistingSpreadsheet(s2, s1.sheet, True)
+    if (succeeded is False):
+        return False
+    #test that we can see cell selection from other users
+    return testCellSelectWithTwo(s1,s2,"B1")
+
+#test that spreadsheets are separated instances
+def test5(ip_address):
+    #connect first socket
+    s1 = connectToIP(ip_address)
+    if s1 is False:
+        return False
+    succeeded = testHandshakeWithNewSpreadsheet(s1)
+    if (succeeded is False):
+        return False
+    #connect second socket
+    s2 = connectToIP(ip_address)
+    if s2 is False:
+        return False
+    succeeded = testHandshakeWithNewSpreadsheet(s2)
+    if (succeeded is False):
+        return False
+    #test that we do NOT receive a cellselect update from s1
+    return not testCellSelectWithTwo(s1, s2, "B2")
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    main(0,0)
+    main(4,"3.138.102.16:1100")

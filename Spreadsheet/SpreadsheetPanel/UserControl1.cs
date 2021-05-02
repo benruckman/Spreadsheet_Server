@@ -261,9 +261,9 @@ namespace SS
             return drawingPanel.ChangeUserSelection(col, row, userName);
         }
 
-        public bool RemoveUserSelection(int col, int row, int userName)
+        public bool RemoveUserSelection(int userName)
         {
-            return drawingPanel.RemoveUserSelection(col, row, userName);
+            return drawingPanel.RemoveUserSelection(userName);
         }
 
         /// <summary>
@@ -422,18 +422,19 @@ namespace SS
                 {
                     if (otherUsers.ContainsKey(userName))
                         otherUsers.Remove(userName);
-                    if (col == -1 && row == -1)
-                        otherUsers.Remove(userName);
                     otherUsers.Add(userName, new Address(col, row));
                 }
                 Invalidate();
                 return true;
             }
 
-            public bool RemoveUserSelection(int col, int row, int userName)
+            public bool RemoveUserSelection(int userName)
             {
-                if (otherUsers.ContainsKey(userName))
-                    otherUsers.Remove(userName);
+                lock (_values)
+                {
+                    if (otherUsers.ContainsKey(userName))
+                        otherUsers.Remove(userName);
+                }
                 Invalidate();
                 return true;
             }
@@ -590,6 +591,7 @@ namespace SS
 
 
 
+
                     //Explicitly for drawing other user's highlighted cells 
                     foreach (int id in otherUsers.Keys)
                     {
@@ -606,8 +608,10 @@ namespace SS
                                               DATA_ROW_HEIGHT - 2));
                         }
                     }
+                    
                     pen.Color = Color.Black;
                     // Highlight the selection, if it is visible
+
                     if ((_selectedCol - _firstColumn >= 0) && (_selectedRow - _firstRow >= 0))
                     {
                         e.Graphics.DrawRectangle(
@@ -616,6 +620,26 @@ namespace SS
                                           LABEL_ROW_HEIGHT + (_selectedRow - _firstRow) * DATA_ROW_HEIGHT + 1,
                                           DATA_COL_WIDTH - 2,
                                           DATA_ROW_HEIGHT - 2));
+                    }
+
+
+                    //Explicitly for drawing other user's highlighted cells 
+                    foreach (int id in otherUsers.Keys)
+                    {
+                        Address a = otherUsers[id];
+
+                        //We need this to happen for all different people selecting in our code spreadsheet, for the spreadsheet server. 
+                        if ((a.Col - _firstColumn >= 0) && (a.Row - _firstRow >= 0))
+                        {
+                            pen.Color = GetColorForID(id);
+                            e.Graphics.DrawRectangle(
+                                pen,
+                                new Rectangle(LABEL_COL_WIDTH + (a.Col - _firstColumn) * DATA_COL_WIDTH + 1,
+                                              LABEL_ROW_HEIGHT + (a.Row - _firstRow) * DATA_ROW_HEIGHT + 1,
+                                              DATA_COL_WIDTH - 2,
+                                              DATA_ROW_HEIGHT - 2));
+                        }
+
                     }
 
                     // Draw the text
