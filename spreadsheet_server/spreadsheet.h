@@ -15,6 +15,7 @@
 #include <tuple>
 #include <string>
 #include <stack>
+#include <regex>
 
 using namespace std;
 
