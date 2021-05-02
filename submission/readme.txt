@@ -13,7 +13,7 @@ Server:
         docker image build --tag server_we_hate_league .
 
     After building, run the server with this command (make sure to name a directoy to mount):
-        docker run --mount type=bind,source=/[insert some directory here],target=/spreadsheet_data -p 1100:1100 server_we_hate_lol /spreadsheet_server
+        docker run --mount type=bind,source=/[insert some directory here],target=/spreadsheet_data -p 1100:1100 server_we_hate_league /spreadsheet_server
 
     Ctrl+c will close a running server.
 
