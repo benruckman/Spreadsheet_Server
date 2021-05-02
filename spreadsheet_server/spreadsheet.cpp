@@ -2,8 +2,13 @@
  * Authors: Jackson McKay, John Richard, Soe Min Hitke, Donnie Kubiak, Jingwen Zang, Ben Ruckman
  * Date:    4/30/21
  */
+ 
+/*
+ * Sources:
+ *
+ */
 
-#include <iostream> 
+#include <iostream> // Remove before submission
 #include <unistd.h> 
 #include <arpa/inet.h> 
 #include <sys/types.h>
@@ -18,7 +23,6 @@
 #include <set>
 #include <iterator>
 #include <algorithm>
-#include <regex>
 #include <tuple>
 #include <map>
 #include <stack>
@@ -248,7 +252,8 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
  *
  * Returns: True if it creates a circular dependency, false otherwise
  */
-bool spreadsheet::creates_circular_dependency(string name, vector<string>& vars) {
+bool spreadsheet::creates_circular_dependency(string name, vector<string>& vars) 
+{
 	set<string> oldDependees;
 	auto it = variables.find(name);
 	
@@ -261,48 +266,47 @@ bool spreadsheet::creates_circular_dependency(string name, vector<string>& vars)
 	for (int i = 0; i < vars.size(); i++)
 	{
 		newDependees.insert(vars[i]);
+		cout << vars[i] << endl;
 	}
 	
 	set<string> visited;
 	variables[name] = newDependees;
 	
-	if(!visit(name, name, visited)){
-		variables[name] = oldDependees;
-		return true;
+	for(int i = 0; i < vars.size(); i++)
+	{
+		if(!visit(name, vars[i], visited))
+		{
+			variables[name] = oldDependees;
+			return true;
+		}
 	}
 	return false;
-	// for (int i = 0; i < vars.size(); i++) {
-	// 	if(vars[i] == name){
-	// 		return true;
-	// 	}
-	// 	if (get_dependency_graph().hasDependents(vars[i])) {
-	// 		set<string> var_dependents = get_dependency_graph().getDependents(vars[i]);
-	// 		for (set<string>::iterator i = var_dependents.begin(); i != var_dependents.end(); i++) {
-	// 			if (*i == name) {
-	// 				return true;
-	// 			}
-	// 		}
-	// 	}
-	// }
-	// return false;
 }
+
+
 bool spreadsheet::visit(string &start, string name, set<string> &visited) {
     visited.insert(name);
     
     set<string> var_dependees = variables.find(name)->second;
     std::cout<<"name: "<<start<<std::endl;
-	for (set<string>::iterator i = var_dependees.begin(); i != var_dependees.end(); i++) {
+    
+	for (set<string>::iterator i = var_dependees.begin(); i != var_dependees.end(); i++) 
+	{
 		std::cout<<*i<<std::endl;
+		
         if (*i == start)
         {
         	std::cout<<"circ dependency caught: "<<*i<<std::endl;
             return false;
         }
-		if(visited.find(*i) == visited.end()){
+        
+		if(visited.find(*i) == visited.end())
+		{
 			std::cout<<"circ dependency not caught: "<<*i<<std::endl;
             return visit(start, *i, visited);
         }
     }
+    
     return true;
 }
 
@@ -469,7 +473,6 @@ void spreadsheet::save()
 {
 	// TODO: ABSOLUTE FILE NAME
 	string file_name = "/spreadsheet_data/" + spreadsheet_name + ".sprd";
-	//string file_name =  spreadsheet_name + ".txt";
 
 	ofstream f(file_name);
 	// Iterate through the nonempty cell and write them to a text file
@@ -625,21 +628,45 @@ bool spreadsheet::process_messages()
  */
 vector<string> spreadsheet::get_variables(string contents)
 {
-	vector<string> input;
-	vector<string> variables;
-	string inputString = contents;
-	char delimeters[5] = { '-', '+', '*', '/', '='};
-	input = split(contents, delimeters);	
-	for(string s : input)
+	char delimiters[8] = { '-', '+', '*', '/', '=', ')', '(', ' ' };
+	std::vector<std::string> variables;
+	std::string token = "";
+	char *current_char;
+	
+	for(int i = 0; i < contents.size(); i++)
 	{
-        int val = atoi(s.c_str());
-        if(val == 0)
-        {
-			for (auto & c: s) 
-				c = toupper(c);
-	     	variables.push_back(s);
-        }
+		cout << "conents[i]: " << contents[i] << endl;
+		current_char = std::find(std::begin(delimiters), std::end(delimiters), contents[i]);
+		if(current_char != std::end(delimiters))
+		{
+			if(isalpha(token[0]))
+			{
+				cout << "token pushed: " << token << endl;
+				variables.push_back(token);
+				//cout << "New Token: " << token << endl;
+			}
+			token = "";
+		}
+		else
+		{
+			token.append(contents.substr(i, 1));
+			cout << "appended token: " << token << endl;
+		}
 	}
+	
+	if(isalpha(token[0]))
+	{
+		variables.push_back(token);
+		//cout << "New Token: " << token << endl;
+	}
+	
+	cout << "Variables: ";
+	
+	for(int j = 0; j < variables.size(); j++)
+		cout << variables[j] << " ";
+	
+	cout << endl;
+	
 	return variables;
 }
 
@@ -836,7 +863,7 @@ vector<string> spreadsheet::split(string str, char delimeter[])
 	while(pos <= str.length())
 	  { //just for jogn
 	  bool result = true;
-	  for(int i = 0; i < 5; i++)
+	  for(int i = 0; i < 8; i++)
 	  {
 	    int position = s.find_first_of(delimeter[i]);
 	    if(pos > position && position != -1)
