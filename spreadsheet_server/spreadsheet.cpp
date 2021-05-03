@@ -76,13 +76,6 @@ spreadsheet::spreadsheet()
  */
 spreadsheet::~spreadsheet()
 {
-	int num_users = this->user_list.size();
-	
-	// for (int i = 0; i < num_users; i++)
-	// {
-	// 	remove_user(user_list[i].get_id())
-	// }
-	
 	delete history_real;
 }
 
@@ -198,10 +191,8 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 		if (content[0] == '=') // this is a formula
 		{
 			vector<string> var = get_variables(content);
-			if (creates_circular_dependency(name, var)) {
-
-			  //std::cout<<"Circular dependency caught"<<std::endl;
-
+			if (creates_circular_dependency(name, var)) 
+			{
 				return false;
 			}
 		}
@@ -224,10 +215,8 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 		if (content[0] == '=') // this is a formula
 		{
 			vector<string> var = get_variables(content);
-			if (creates_circular_dependency(name, var)) {
-
-			  //std::cout<<"Circular dependency caught!"<<std::endl;
-
+			if (creates_circular_dependency(name, var)) 
+			{
 				return false;
 			}
 		}
@@ -266,7 +255,6 @@ bool spreadsheet::creates_circular_dependency(string name, vector<string>& vars)
 	for (int i = 0; i < vars.size(); i++)
 	{
 		newDependees.insert(vars[i]);
-		//cout << vars[i] << endl;
 	}
 	
 	set<string> visited;
@@ -288,21 +276,16 @@ bool spreadsheet::visit(string &start, string name, set<string> &visited) {
     visited.insert(name);
     
     set<string> var_dependees = variables.find(name)->second;
-    //std::cout<<"name: "<<start<<std::endl;
     
 	for (set<string>::iterator i = var_dependees.begin(); i != var_dependees.end(); i++) 
 	{
-		//std::cout<<*i<<std::endl;
-		
         if (*i == start)
         {
-        	//std::cout<<"circ dependency caught: "<<*i<<std::endl;
             return false;
         }
         
 		if(visited.find(*i) == visited.end())
 		{
-			//std::cout<<"circ dependency not caught: "<<*i<<std::endl;
             return visit(start, *i, visited);
         }
     }
@@ -626,10 +609,9 @@ bool spreadsheet::process_messages()
 			if(m.type != "selectCell" || it->get_socket() != m.sender->get_socket())
 				send(it->get_socket(), mess, strlen(mess), 0);
 		}
-		//std::cout<<mess<<endl;
 	}
 	pthread_mutex_unlock(&mutexqueue);
-
+	
 	return true;
 }
 
@@ -649,38 +631,26 @@ vector<string> spreadsheet::get_variables(string contents)
 	
 	for(int i = 0; i < contents.size(); i++)
 	{
-		//cout << "conents[i]: " << contents[i] << endl;
 		current_char = std::find(std::begin(delimiters), std::end(delimiters), contents[i]);
 		if(current_char != std::end(delimiters))
 		{
 			if(isalpha(token[0]))
 			{
-				//cout << "token pushed: " << token << endl;
 				variables.push_back(token);
-				//cout << "New Token: " << token << endl;
 			}
 			token = "";
 		}
 		else
 		{
 			token.append(contents.substr(i, 1));
-			//cout << "appended token: " << token << endl;
 		}
 	}
 	
 	if(isalpha(token[0]))
 	{
 		variables.push_back(token);
-		//cout << "New Token: " << token << endl;
 	}
-	
-	//cout << "Variables: ";
-	
-	// for(int j = 0; j < variables.size(); j++)
-	// 	cout << variables[j] << " ";
-	
-	//cout << endl;
-	
+
 	return variables;
 }
 
@@ -847,7 +817,6 @@ spreadsheet::message spreadsheet::deserialize_message(string input)
 			int findPos2 = input.find_last_of(tester); // finds second quote mark
 			std::string name;
 			string neww = input.substr(findPos + 1, (findPos2 - findPos) - 1);
-			std::cout <<"outputs: " << neww << std::endl;
 			outputs[i] = neww;
 			start = findPos2 + 1;
 			i++;
