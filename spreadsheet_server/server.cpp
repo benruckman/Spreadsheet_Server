@@ -242,7 +242,8 @@ int main(int argc, char* argv[])
 							s->add_message(token, cli->get_id());
 						}
 						int n = message.length();
-    					strcpy(cli->get_buffer(), message.c_str());
+						if(cli->get_buffer())
+    						strcpy(cli->get_buffer(), message.c_str());
 						cli->set_sizeleft(message.length());
 						pthread_mutex_unlock(&mutexsheets);
 					}

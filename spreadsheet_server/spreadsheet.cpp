@@ -182,12 +182,13 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 {
 	// used to keep the previous contents of a cell
 	string previous_contents = "";
+
 	auto it = non_empty_cells.find(name);
 	if (it != non_empty_cells.end())
 	{
 		// get the cell in question
-		cell* c = &it->second;
-		previous_contents = c->cell_contents.top();
+		cell c = it->second;
+		previous_contents = c.cell_contents.top();
 		if (content[0] == '=') // this is a formula
 		{
 			vector<string> var = get_variables(content);
@@ -201,13 +202,13 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 		}
 		if (!undo)
 		{
-			c->cell_contents.push(content);
+			c.cell_contents.push(content);
 			edit e;
 			e.name = name;
 			e.contents = content;
 			this->history_real->push(e);
 		}
-		non_empty_cells[name] = *c;
+		non_empty_cells[name] = c;
 		return true;
 	}
 	else
@@ -215,6 +216,7 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 		if (content[0] == '=') // this is a formula
 		{
 			vector<string> var = get_variables(content);
+
 			if (creates_circular_dependency(name, var)) 
 			{
 				return false;
@@ -245,21 +247,21 @@ bool spreadsheet::creates_circular_dependency(string name, vector<string>& vars)
 {
 	set<string> oldDependees;
 	auto it = variables.find(name);
-	
+
 	if(it != variables.end()){
 		oldDependees = it->second;
 	}
-	
+
 	set<string> newDependees;
 	
 	for (int i = 0; i < vars.size(); i++)
 	{
 		newDependees.insert(vars[i]);
 	}
-	
+
 	set<string> visited;
 	variables[name] = newDependees;
-	
+
 	for(int i = 0; i < vars.size(); i++)
 	{
 		if(!visit(name, vars[i], visited))
@@ -274,16 +276,17 @@ bool spreadsheet::creates_circular_dependency(string name, vector<string>& vars)
 
 bool spreadsheet::visit(string &start, string name, set<string> &visited) {
     visited.insert(name);
-    
-    set<string> var_dependees = variables.find(name)->second;
-    
-	for (set<string>::iterator i = var_dependees.begin(); i != var_dependees.end(); i++) 
+    auto var_dependees = variables.find(name);
+    if(var_dependees == variables.end()){
+    	return true;
+    }
+    set<string> dependees = var_dependees->second;
+	for (set<string>::iterator i = dependees.begin(); i != dependees.end(); i++) 
 	{
         if (*i == start)
         {
             return false;
         }
-        
 		if(visited.find(*i) == visited.end())
 		{
             return visit(start, *i, visited);
@@ -624,8 +627,9 @@ bool spreadsheet::process_messages()
  */
 vector<string> spreadsheet::get_variables(string contents)
 {
+	std::vector<std::string> vars;
+	if(contents!=""){
 	char delimiters[8] = { '-', '+', '*', '/', '=', ')', '(', ' ' };
-	std::vector<std::string> variables;
 	std::string token = "";
 	char *current_char;
 	
@@ -636,7 +640,7 @@ vector<string> spreadsheet::get_variables(string contents)
 		{
 			if(isalpha(token[0]))
 			{
-				variables.push_back(token);
+				vars.push_back(token);
 			}
 			token = "";
 		}
@@ -648,10 +652,11 @@ vector<string> spreadsheet::get_variables(string contents)
 	
 	if(isalpha(token[0]))
 	{
-		variables.push_back(token);
+		vars.push_back(token);
+	}
 	}
 
-	return variables;
+	return vars;
 }
 
 

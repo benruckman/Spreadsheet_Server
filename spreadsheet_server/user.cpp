@@ -52,7 +52,7 @@ user::user(int id, int socket, std::string username, std::string ssname)
  */
 user::~user()
 {
-
+  //delete [] buffer;
 }
 
 /* Returns size of data not parse from buffer
