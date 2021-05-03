@@ -234,11 +234,10 @@ int main(int argc, char* argv[])
 						spreadsheet* s = it->second;
 						std::string delimiter = "\n";
 						size_t pos = 0;
-						std::string token;
+						std::string token = "";
 						while ((pos = message.find(delimiter)) != std::string::npos)
 						{
     						token = message.substr(0, pos);
-    						//std::cout << token << std::endl;
     						message.erase(0, pos + delimiter.length());
 							s->add_message(token, cli->get_id());
 						}
