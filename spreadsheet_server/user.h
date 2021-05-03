@@ -37,6 +37,7 @@ class user
         void clear_buffer(); 
         std::string get_current();
         void set_current(std::string curr);
+        std::string get_current_cell();
 };
 
 #endif

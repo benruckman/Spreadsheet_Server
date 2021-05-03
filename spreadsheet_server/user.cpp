@@ -165,6 +165,17 @@ char* user::get_buffer()
   return this->buffer;
 }
 
+/* Returns the name of the cell the user is currently selecting
+ * 
+ * Parameters: None
+ *  
+ * Returns: the name of the cell the user is currently selecting
+ */
+std::string user::get_current_cell()
+{
+  return this->currcell;
+}
+
 /* Clears out all data from this users buffer
  * 
  * Parameters: None

@@ -111,7 +111,7 @@ class spreadsheet
     bool visit(string &start, string name, set<string> &visited); 
     
     // This method will undo the change made to the spreadsheet
-    string revert_cell(string selectedCell);
+    tuple<string, bool> revert_cell(string selectedCell);
     
     string undo();
 

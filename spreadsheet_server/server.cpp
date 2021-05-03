@@ -238,7 +238,7 @@ int main(int argc, char* argv[])
 						while ((pos = message.find(delimiter)) != std::string::npos)
 						{
     						token = message.substr(0, pos);
-    						std::cout << token << std::endl;
+    						//std::cout << token << std::endl;
     						message.erase(0, pos + delimiter.length());
 							s->add_message(token, cli->get_id());
 						}
@@ -430,7 +430,7 @@ void shut_down(int sigint)
 	{
 		if (clients[i].get_id() != -1)
 		{
-			std::cout << "Sending disconnect message to "<< clients[i].get_username() << std::endl;
+			//std::cout << "Sending disconnect message to "<< clients[i].get_username() << std::endl;
 			spreadsheet ss("");
 			string s = ss.serialize_server_shutdown("serverError", "Server is closing");
 			int n = s.length();

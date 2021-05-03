@@ -200,7 +200,7 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 			vector<string> var = get_variables(content);
 			if (creates_circular_dependency(name, var)) {
 
-			  std::cout<<"Circular dependency caught"<<std::endl;
+			  //std::cout<<"Circular dependency caught"<<std::endl;
 
 				return false;
 			}
@@ -226,7 +226,7 @@ bool spreadsheet::set_contents_of_cell(string name, string content, bool undo)
 			vector<string> var = get_variables(content);
 			if (creates_circular_dependency(name, var)) {
 
-			  std::cout<<"Circular dependency caught!"<<std::endl;
+			  //std::cout<<"Circular dependency caught!"<<std::endl;
 
 				return false;
 			}
@@ -266,7 +266,7 @@ bool spreadsheet::creates_circular_dependency(string name, vector<string>& vars)
 	for (int i = 0; i < vars.size(); i++)
 	{
 		newDependees.insert(vars[i]);
-		cout << vars[i] << endl;
+		//cout << vars[i] << endl;
 	}
 	
 	set<string> visited;
@@ -288,21 +288,21 @@ bool spreadsheet::visit(string &start, string name, set<string> &visited) {
     visited.insert(name);
     
     set<string> var_dependees = variables.find(name)->second;
-    std::cout<<"name: "<<start<<std::endl;
+    //std::cout<<"name: "<<start<<std::endl;
     
 	for (set<string>::iterator i = var_dependees.begin(); i != var_dependees.end(); i++) 
 	{
-		std::cout<<*i<<std::endl;
+		//std::cout<<*i<<std::endl;
 		
         if (*i == start)
         {
-        	std::cout<<"circ dependency caught: "<<*i<<std::endl;
+        	//std::cout<<"circ dependency caught: "<<*i<<std::endl;
             return false;
         }
         
 		if(visited.find(*i) == visited.end())
 		{
-			std::cout<<"circ dependency not caught: "<<*i<<std::endl;
+			//std::cout<<"circ dependency not caught: "<<*i<<std::endl;
             return visit(start, *i, visited);
         }
     }
@@ -347,7 +347,7 @@ void spreadsheet::remove_user(int id)
  *
  * Returns: the name and contents of the newly reverted cell, separated by a space
  */
-string spreadsheet::revert_cell(string selectedCell)
+tuple<string, bool> spreadsheet::revert_cell(string selectedCell)
 {
 	// Find the cell we are reverting
 	auto it = non_empty_cells.find(selectedCell);
@@ -358,7 +358,7 @@ string spreadsheet::revert_cell(string selectedCell)
 		if (c->cell_contents.empty())
 		{
 			// If the cell has no past, return empty contents
-			return ret;
+			return make_tuple(ret,true);
 		}
 		else
 		{
@@ -374,7 +374,7 @@ string spreadsheet::revert_cell(string selectedCell)
 				this->history_real->push(e);
 				variables.erase(e.name);
 				//non_empty_cells.erase(selectedCell);
-				return ret;
+				return make_tuple(ret,true);
 			}
 			else
 			{
@@ -386,7 +386,7 @@ string spreadsheet::revert_cell(string selectedCell)
 					if (creates_circular_dependency(selectedCell, var)) {
 						c->current_reverts.pop();
 						c->cell_contents.push(old);
-						return "";
+						return make_tuple("",false);
 					}
 				}
 				
@@ -395,7 +395,7 @@ string spreadsheet::revert_cell(string selectedCell)
 				e.contents = neww;
 				this->history_real->push(e);
 				ret = selectedCell + " " + neww;
-				return ret;
+				return make_tuple(ret,true);
 			}
 		}
 	}
@@ -403,7 +403,7 @@ string spreadsheet::revert_cell(string selectedCell)
 	{
 		ret = "";
 	}
-	return ret;
+	return make_tuple(ret,true);
 }
 
 /* Undos the last edit made to this spreadsheet
@@ -555,17 +555,19 @@ bool spreadsheet::process_messages()
 		string message;
 		if (m.type == "editCell")
 		{
-			if (!set_contents_of_cell(m.name, m.contents, false))
-			{
-				message = serialize_invalid_request("requestError", m.name, "Circular dependency created.");
-				int n = message.length();
-				char mess[n + 1];
-				strcpy(mess, message.c_str());
-				send(m.sender->get_socket(), mess, strlen(mess), 0);
-				continue;
+			if(m.name == m.sender->get_current_cell()){
+				if (!set_contents_of_cell(m.name, m.contents, false))
+				{
+					message = serialize_invalid_request("requestError", m.name, "Circular dependency created.");
+					int n = message.length();
+					char mess[n + 1];
+					strcpy(mess, message.c_str());
+					send(m.sender->get_socket(), mess, strlen(mess), 0);
+					continue;
+				}
+				else
+					message = serialize_cell_update("cellUpdated", m.name, m.contents);
 			}
-			else
-				message = serialize_cell_update("cellUpdated", m.name, m.contents);
 		}
 		else if (m.type == "selectCell")
 		{
@@ -582,17 +584,27 @@ bool spreadsheet::process_messages()
 				std::string cell_contents = line.substr(cell_name.length() + 1);
 				message = serialize_cell_update("cellUpdated", cell_name, cell_contents);
 			}
+			else{
+				message = serialize_invalid_request("requestError", m.name, "Nothing to undo.");
+				int n = message.length();
+				char mess[n + 1];
+				strcpy(mess, message.c_str());
+				send(m.sender->get_socket(), mess, strlen(mess), 0);
+				continue;
+			}
 		}
 		else if (m.type == "revertCell")
 		{
-			string line = revert_cell(m.name);
-			if (line != "")
+			tuple<string,bool> rev_return = revert_cell(m.name);
+			string line = get<0>(rev_return);
+			bool valid = get<1>(rev_return);
+			if (valid && line != "")
 			{
 				size_t last_index = line.find_first_of(" ");
 				std::string cell_name = line.substr(0, last_index);
 				std::string cell_contents = line.substr(cell_name.length() + 1);
 				message = serialize_cell_update("cellUpdated", cell_name, cell_contents);
-			}else{
+			}else if(!valid){
 				message = serialize_invalid_request("requestError", m.name, "Circular dependency created.");
 				int n = message.length();
 				char mess[n + 1];
@@ -611,8 +623,10 @@ bool spreadsheet::process_messages()
 		strcpy(mess, message.c_str());
 		for (vector<user>::iterator it = user_list.begin(); it != user_list.end(); it++)
 		{
-			send(it->get_socket(), mess, strlen(mess), 0);
+			if(m.type != "selectCell" || it->get_socket() != m.sender->get_socket())
+				send(it->get_socket(), mess, strlen(mess), 0);
 		}
+		//std::cout<<mess<<endl;
 	}
 	pthread_mutex_unlock(&mutexqueue);
 
@@ -635,13 +649,13 @@ vector<string> spreadsheet::get_variables(string contents)
 	
 	for(int i = 0; i < contents.size(); i++)
 	{
-		cout << "conents[i]: " << contents[i] << endl;
+		//cout << "conents[i]: " << contents[i] << endl;
 		current_char = std::find(std::begin(delimiters), std::end(delimiters), contents[i]);
 		if(current_char != std::end(delimiters))
 		{
 			if(isalpha(token[0]))
 			{
-				cout << "token pushed: " << token << endl;
+				//cout << "token pushed: " << token << endl;
 				variables.push_back(token);
 				//cout << "New Token: " << token << endl;
 			}
@@ -650,7 +664,7 @@ vector<string> spreadsheet::get_variables(string contents)
 		else
 		{
 			token.append(contents.substr(i, 1));
-			cout << "appended token: " << token << endl;
+			//cout << "appended token: " << token << endl;
 		}
 	}
 	
@@ -660,12 +674,12 @@ vector<string> spreadsheet::get_variables(string contents)
 		//cout << "New Token: " << token << endl;
 	}
 	
-	cout << "Variables: ";
+	//cout << "Variables: ";
 	
-	for(int j = 0; j < variables.size(); j++)
-		cout << variables[j] << " ";
+	// for(int j = 0; j < variables.size(); j++)
+	// 	cout << variables[j] << " ";
 	
-	cout << endl;
+	//cout << endl;
 	
 	return variables;
 }
