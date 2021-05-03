@@ -76,13 +76,6 @@ spreadsheet::spreadsheet()
  */
 spreadsheet::~spreadsheet()
 {
-	int num_users = this->user_list.size();
-	
-	// for (int i = 0; i < num_users; i++)
-	// {
-	// 	remove_user(user_list[i].get_id())
-	// }
-	
 	delete history_real;
 }
 
